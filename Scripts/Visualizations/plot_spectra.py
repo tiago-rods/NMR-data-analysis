@@ -7,7 +7,6 @@ def plot_overlaid_spectra(csv_file, title):
         print(f"Erro: Arquivo não encontrado - {csv_file}")
         return
 
-    print(f"Carregando dados de {csv_file}...")
     df = pd.read_csv(csv_file)
     
     if 'PPM' not in df.columns:
@@ -21,8 +20,7 @@ def plot_overlaid_spectra(csv_file, title):
     # Plota cada experimento (coluna) contra o PPM
     experiments = [col for col in df.columns if col != 'PPM']
     
-    print(f"Plotando {len(experiments)} espectros...")
-    for col in experiments:
+    for col in experiments: 
         plt.plot(ppm, df[col], label=col, linewidth=0.8, alpha=0.8)
 
     # Configurações do gráfico

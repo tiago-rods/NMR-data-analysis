@@ -32,34 +32,34 @@ OUTPUT_DIR = os.path.join(PROJECT_ROOT, 'Results', 'Statistics')
 def load_data(path: str):
     """Load quantification_comparison.csv. Returns (full_df, valid_paired_df)."""
     df = pd.read_csv(path)
-    df['Concentration_ASICS'] = pd.to_numeric(df['Concentration_ASICS'], errors='coerce')
-    df['Concentration_GS'] = pd.to_numeric(df['Concentration_GS'], errors='coerce')
-    valid = df.dropna(subset=['Concentration_ASICS', 'Concentration_GS']).copy()
+    df['Concentration_ASICS'] = pd.to_numeric(df['Concentration_ASICS'], errors='coerce') # Transforma a concentração para numerica, permitindo cálculo estatístico
+    df['Concentration_GS'] = pd.to_numeric(df['Concentration_GS'], errors='coerce') # Coerce garante que mesmo se não encontrar um valor, continua a execução apenas deixando a lacuna vazia
+    valid = df.dropna(subset=['Concentration_ASICS', 'Concentration_GS']).copy() #  .dropna -> remove linhas com valores ausentes (NaN), .copy Cria uma cópia do dataframe
     print(f"Total records: {len(df)}  |  Valid paired records: {len(valid)}")
-    return df, valid
+    return df, valid # df (todos os registros com NaN), valid (Apenas registros com pares completos)
 
 
 # ============================================================
 # Análise por Experimento
 # ============================================================
-def experiment_analysis(full_df: pd.DataFrame, valid_df: pd.DataFrame) -> pd.DataFrame:
+def experiment_analysis(full_df: pd.DataFrame, valid_df: pd.DataFrame) -> pd.DataFrame: #type hint, indica o tipo de dado e a função que retorna
     """Compute per-experiment correlation and error metrics."""
-    rows = []
+    rows = [] # Inicializa a lista de resultados
 
     # Count metabolites identified by ASICS (concentration > 0) per experiment
-    full_grouped = full_df.groupby(['Biofluido', 'Experiment'])
+    full_grouped = full_df.groupby(['Biofluido', 'Experiment']) # Agrupa dados por biofluido e experimento
     valid_grouped = valid_df.groupby(['Biofluido', 'Experiment'])
 
     for (biofluid, experiment), full_group in full_grouped:
         # ASICS-identified: Concentration_ASICS > 0 (non-NaN and non-zero)
-        n_asics = int(((full_group['Concentration_ASICS'].notna()) & (full_group['Concentration_ASICS'] > 0)).sum())
+        n_asics = int(((full_group['Concentration_ASICS'].notna()) & (full_group['Concentration_ASICS'] > 0)).sum()) # .notna, valores não NaN (existem), e concentração > 0, sum() conta quantos fazem isso
         # GS-identified: Concentration_GS is not NaN
         n_gs = int(full_group['Concentration_GS'].notna().sum())
 
         # Paired data for correlations/errors
         if (biofluid, experiment) in valid_grouped.groups:
             group = valid_grouped.get_group((biofluid, experiment))
-            asics = group['Concentration_ASICS'].values
+            asics = group['Concentration_ASICS'].values # Ex
             gs = group['Concentration_GS'].values
             n_paired = len(group)
 
@@ -158,7 +158,17 @@ def metabolite_analysis(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def build_comparison_with_diff(valid_df: pd.DataFrame, full_df: pd.DataFrame) -> pd.DataFrame:
-    """Build a table like quantification_comparison with an absolute difference column."""
+    """Build a table like quantification_comparison with an absolute difference column.
+    
+    Within each experiment the rows are sorted by Concentration_ASICS in
+    ascending order.  The original experiment order is preserved (not sorted
+    alphabetically) by using a categorical key derived from the order of
+    first appearance.
+    
+    Note: pandas uses Timsort internally (a stable O(n log n) hybrid of
+    merge sort and insertion sort), which is strictly superior to Quick Sort
+    for this workload (Quick Sort has O(n²) worst-case and is not stable).
+    """
     # Start from the full dataframe to keep all rows
     out = full_df[['Biofluido', 'Experiment', 'Metabolite', 'HMDB',
                    'Concentration_ASICS', 'Concentration_GS']].copy()
@@ -166,6 +176,20 @@ def build_comparison_with_diff(valid_df: pd.DataFrame, full_df: pd.DataFrame) ->
     # Percentage error: |ASICS - GS| / GS * 100  (NaN when GS is 0 or missing)
     gs = out['Concentration_GS']
     out['Erro_Percentual'] = (out['Diferenca_Absoluta'] / gs.replace(0, np.nan) * 100).round(2)
+
+    # --- Sort by Concentration_ASICS ascending WITHIN each experiment -----
+    # Preserve original experiment order using a categorical based on first
+    # appearance so that sort_values does not reorder experiments.
+    experiment_order = out[['Biofluido', 'Experiment']].drop_duplicates()
+    experiment_keys = experiment_order.apply(lambda r: (r['Biofluido'], r['Experiment']), axis=1).tolist()
+    out['_exp_key'] = out.apply(lambda r: (r['Biofluido'], r['Experiment']), axis=1)
+    out['_exp_key'] = pd.Categorical(out['_exp_key'], categories=experiment_keys, ordered=True)
+
+    out = out.sort_values(
+        by=['_exp_key', 'Concentration_ASICS'],
+        ascending=[True, True],
+    ).drop(columns=['_exp_key']).reset_index(drop=True)
+
     return out
 
 
