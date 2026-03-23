@@ -130,9 +130,14 @@ def run_statistics(full_df, valid_df):
         else:
             mape = np.nan
             
+        cobertura = round((n_magmet / n_gs) * 100, 2) if n_gs > 0 else np.nan
+        identificados_gs = round((n_paired / n_gs) * 100, 2) if n_gs > 0 else np.nan
+
         exp_rows.append({
             'Biofluido': bio, 'Experimento': exp, 'Metodo': 'MagMet',
             'N_Metabolitos_MagMet': n_magmet, 'N_Metabolitos_GS': n_gs, 'N_Metabolitos_Pareados': n_paired,
+            'Cobertura (%)': cobertura,
+            'Identificados_GS (%)': identificados_gs,
             'Pearson_r': pearson_r, 'Pearson_p': pearson_p, 'Spearman_r': spearman_r, 'Spearman_p': spearman_p,
             'MAE': mae, 'MSE': mse, 'MAPE': mape, 'Bias': bias
         })
@@ -181,6 +186,11 @@ if __name__ == '__main__':
     # Full Diff Table
     full['Diff_Abs'] = np.abs(full['Concentration_MagMet'] - full['Concentration_GS'])
     full['Diff_Perc'] = (full['Diff_Abs'] / full['Concentration_GS'] * 100).replace([np.inf, -np.inf], np.nan)
+    
+    # Filter: keep only rows where at least one concentration > 0
+    magmet_pos = full['Concentration_MagMet'].fillna(0) > 0
+    gs_pos = full['Concentration_GS'].fillna(0) > 0
+    full = full[magmet_pos | gs_pos].copy()
     
     # Sort by concentration within experiment
     full = full.sort_values(by=['Experiment', 'Concentration_MagMet'], ascending=[True, True])

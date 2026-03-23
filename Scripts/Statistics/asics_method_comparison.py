@@ -12,7 +12,7 @@ PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, '..', '..'))
 FID_CSV = os.path.join(PROJECT_ROOT, 'Data', 'Quantification', 'ASICS', 'Urina', 'quantification_bruker_fid.csv')
 CSV_CSV = os.path.join(PROJECT_ROOT, 'Data', 'Quantification', 'ASICS', 'Urina', 'quantification_bruker_csv.csv')
 COMPARISON_CSV = os.path.join(PROJECT_ROOT, 'Results', 'Comparison', 'quantification_comparison.csv')
-OUTPUT_CSV = os.path.join(PROJECT_ROOT, 'Results', 'Statistics', 'asics_fid_csv_comparison.csv')
+OUTPUT_CSV = os.path.join(PROJECT_ROOT, 'Results', 'Statistics', 'ASICS statistics', 'asics_fid_csv_comparison.csv')
 
 def normalize_experiment(name):
     """Normalize experiment name to 'XXRCF' format."""
@@ -141,10 +141,17 @@ def main():
     
     comp_df = merged.fillna(0)
 
+    # Filter: keep only rows where at least one concentration > 0
+    fid_pos = comp_df['Concentration_ASICS_FID'] > 0
+    csv_pos = comp_df['Concentration_ASICS_CSV'] > 0
+    gs_pos = comp_df['Concentration_GS'] > 0
+    comp_df = comp_df[fid_pos | csv_pos | gs_pos].copy()
+
     # Calculate absolute differences and percentage errors
     print("Calculating metrics...")
     comp_df['Diff_FID_GS'] = (comp_df['Concentration_ASICS_FID'] - comp_df['Concentration_GS']).abs()
     comp_df['Diff_CSV_GS'] = (comp_df['Concentration_ASICS_CSV'] - comp_df['Concentration_GS']).abs()
+    comp_df['Diff_FID_CSV'] = (comp_df['Concentration_ASICS_FID'] - comp_df['Concentration_ASICS_CSV']).abs()
 
     # Percentage error relative to GS (handle division by zero)
     mask = comp_df['Concentration_GS'] > 0
@@ -180,6 +187,8 @@ def main():
             'Identified_FID': count_fid,
             'Identified_CSV': count_csv,
             'Identified_GS': count_gs,
+            'Cobertura_FID (%)': round((count_fid / count_gs) * 100, 2) if count_gs > 0 else np.nan,
+            'Cobertura_CSV (%)': round((count_csv / count_gs) * 100, 2) if count_gs > 0 else np.nan,
             'MAE_FID': round(mae_fid, 2),
             'MAE_CSV': round(mae_csv, 2)
         })

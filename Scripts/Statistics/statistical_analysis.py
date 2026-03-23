@@ -26,7 +26,7 @@ import warnings
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, '..', '..'))
 INPUT_CSV = os.path.join(PROJECT_ROOT, 'quantification_comparison.csv')
-OUTPUT_DIR = os.path.join(PROJECT_ROOT, 'Results', 'Statistics')
+OUTPUT_DIR = os.path.join(PROJECT_ROOT, 'Results', 'Statistics', 'ASICS statistics')
 
 
 def load_data(path: str):
@@ -51,17 +51,24 @@ def experiment_analysis(full_df: pd.DataFrame, valid_df: pd.DataFrame) -> pd.Dat
     valid_grouped = valid_df.groupby(['Biofluido', 'Experiment'])
 
     for (biofluid, experiment), full_group in full_grouped:
-        # ASICS-identified: Concentration_ASICS > 0 (non-NaN and non-zero)
-        n_asics = int(((full_group['Concentration_ASICS'].notna()) & (full_group['Concentration_ASICS'] > 0)).sum()) # .notna, valores não NaN (existem), e concentração > 0, sum() conta quantos fazem isso
-        # GS-identified: Concentration_GS is not NaN
-        n_gs = int(full_group['Concentration_GS'].notna().sum())
+        if '_fid' in experiment.lower():
+            metodo = 'FID'
+        elif '_csv' in experiment.lower():
+            metodo = 'CSV'
+        else:
+            metodo = 'CSV'
+
+        # ASICS-identified: Concentration_ASICS > 0
+        n_asics = int(((full_group['Concentration_ASICS'].notna()) & (full_group['Concentration_ASICS'] > 0)).sum())
+        # GS-identified: Concentration_GS > 0
+        n_gs = int(((full_group['Concentration_GS'].notna()) & (full_group['Concentration_GS'] > 0)).sum())
 
         # Paired data for correlations/errors
         if (biofluid, experiment) in valid_grouped.groups:
             group = valid_grouped.get_group((biofluid, experiment))
             asics = group['Concentration_ASICS'].values # Ex
             gs = group['Concentration_GS'].values
-            n_paired = len(group)
+            n_paired = int(((group['Concentration_ASICS'] > 0) & (group['Concentration_GS'] > 0)).sum())
 
             if n_paired >= 3:
                 pearson_r, pearson_p = stats.pearsonr(asics, gs)
@@ -84,12 +91,18 @@ def experiment_analysis(full_df: pd.DataFrame, valid_df: pd.DataFrame) -> pd.Dat
             pearson_r = pearson_p = spearman_r = spearman_p = np.nan
             mae = mse = bias = mape = np.nan
 
+        cobertura = round((n_asics / n_gs) * 100, 2) if n_gs > 0 else np.nan
+        identificados_gs = round((n_paired / n_gs) * 100, 2) if n_gs > 0 else np.nan
+
         rows.append({
             'Biofluido': biofluid,
             'Experimento': experiment,
+            'Metodo': metodo,
             'N_Metabolitos_ASICS': n_asics,
             'N_Metabolitos_GS': n_gs,
             'N_Metabolitos_Pareados': n_paired,
+            'Cobertura (%)': cobertura,
+            'Identificados_GS (%)': identificados_gs,
             'Pearson_r': round(pearson_r, 6) if not np.isnan(pearson_r) else np.nan,
             'Pearson_p': round(pearson_p, 6) if not np.isnan(pearson_p) else np.nan,
             'Spearman_r': round(spearman_r, 6) if not np.isnan(spearman_r) else np.nan,
@@ -172,6 +185,11 @@ def build_comparison_with_diff(valid_df: pd.DataFrame, full_df: pd.DataFrame) ->
     # Percentage error: |ASICS - GS| / GS * 100  (NaN when GS is 0 or missing)
     gs = out['Concentration_GS']
     out['Erro_Percentual'] = (out['Diferenca_Absoluta'] / gs.replace(0, np.nan) * 100).round(2)
+
+    # Filter: keep only rows where at least one concentration > 0
+    asics_pos = out['Concentration_ASICS'].fillna(0) > 0
+    gs_pos = out['Concentration_GS'].fillna(0) > 0
+    out = out[asics_pos | gs_pos].copy()
 
     # --- Sort by Concentration_ASICS ascending WITHIN each experiment -----
     # Preserve original experiment order using a categorical based on first

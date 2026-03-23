@@ -4,7 +4,7 @@ import os
 def standardize_experiment(name):
     if not isinstance(name, str):
         return str(name)
-    return name.replace('.jdx', '').replace('.cnx', '').strip()
+    return name.replace('.jdx', '').replace('.cnx', '').replace('_ex1_p1', '').strip()
 
 def standardize_metabolite(name):
     if not isinstance(name, str):
@@ -67,8 +67,29 @@ def process_asics(filepath, biofluido):
         print(f"Warning: ASICS file not found: {filepath}")
         return pd.DataFrame()
     df = pd.read_csv(filepath)
-    df = df.rename(columns={'Unnamed: 0': 'Metabolite'})
-    df_long = pd.melt(df, id_vars=['Metabolite'], var_name='Experiment', value_name='Concentration_ASICS')
+    
+    if 'Experiment' in df.columns and ('metabolite' in df.columns or 'Metabolite' in df.columns):
+        # LONG FORMAT
+        if 'metabolite' in df.columns:
+            df = df.rename(columns={'metabolite': 'Metabolite'})
+        
+        target_conc_col = 'Concentration_ASICS'
+        for col in df.columns:
+            if 'Concentration' in col or col == 'Concentration_ASICS_Bruker_uM':
+                target_conc_col = col
+                break
+                
+        df = df.rename(columns={target_conc_col: 'Concentration_ASICS'})
+        df_long = df[['Metabolite', 'Experiment', 'Concentration_ASICS']].copy()
+    else:
+        # WIDE FORMAT
+        if 'Unnamed: 0' in df.columns:
+            df = df.rename(columns={'Unnamed: 0': 'Metabolite'})
+        elif 'metabolite' in df.columns:
+            df = df.rename(columns={'metabolite': 'Metabolite'})
+        elif 'Metabolite' not in df.columns:
+            df = df.rename(columns={df.columns[0]: 'Metabolite'})
+        df_long = pd.melt(df, id_vars=['Metabolite'], var_name='Experiment', value_name='Concentration_ASICS')
     
     df_long['Experiment'] = df_long['Experiment'].apply(standardize_experiment)
     df_long['Metabolite'] = df_long['Metabolite'].apply(standardize_metabolite)
@@ -139,21 +160,45 @@ def main():
     global_hmdb = {}
     
     for bf in biofluids:
-        asics_path = os.path.join(base_dir, "ASICS", bf, f"quantification_{bf}.csv")
         gs_path = os.path.join(base_dir, "Gold_Standard", bf, "concentrations.xlsx")
-        
-        print(f"Processing {bf}...")
-        df_asics = process_asics(asics_path, bf)
+        print(f"Processing {bf} (Gold Standard)...")
         df_gs, hmdb_map = process_gs(gs_path, bf)
         
-        if df_asics.empty or df_gs.empty:
+        if df_gs.empty:
             continue
             
         global_hmdb.update(hmdb_map)
         
-        # Merge
-        merged = pd.merge(df_asics, df_gs, on=['Biofluido', 'Experiment', 'Metabolite'], how='left')
-        all_data.append(merged)
+        # Determine ASICS files based on biofluid
+        if bf == "Urina":
+            asics_configs = [
+                (os.path.join(base_dir, "ASICS", bf, "quantification_bruker_csv.csv"), "_csv"),
+                (os.path.join(base_dir, "ASICS", bf, "quantification_bruker_fid.csv"), "_fid")
+            ]
+        else:
+            asics_configs = [
+                (os.path.join(base_dir, "ASICS", bf, f"quantification_{bf}.csv"), "")
+            ]
+            
+        for asics_path, suffix in asics_configs:
+            if not os.path.exists(asics_path):
+                print(f"Warning: ASICS config file not found: {asics_path}")
+                continue
+                
+            print(f"  Loading ASICS: {os.path.basename(asics_path)}")
+            df_asics = process_asics(asics_path, bf)
+            
+            if df_asics.empty:
+                continue
+                
+            # Merge with Gold Standard FIRST using original matching experiment names
+            merged = pd.merge(df_asics, df_gs, on=['Biofluido', 'Experiment', 'Metabolite'], how='left')
+            
+            # AFTER merge, apply the suffix so the final dataframe distinguishes them
+            if suffix:
+                merged['Experiment'] = merged['Experiment'].apply(lambda x: f"{x}{suffix}")
+                
+            all_data.append(merged)
         
     if all_data:
         final_df = pd.concat(all_data, ignore_index=True)
