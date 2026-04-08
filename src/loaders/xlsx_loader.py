@@ -2,13 +2,13 @@ import os
 import pandas as pd
 from typing import Any
 from src.loaders.factory_loader import FactoryLoader
-from src.readers.csv_reader import CSVReader
-from src.parsers.csv_parser import CSVParser
+from src.readers.xlsx_reader import XLSXReader
+from src.parsers.xlsx_parser import XLSXParser
 
-class CSVLoader(FactoryLoader):
-    def __init__(self, reader: CSVReader = None, parser: CSVParser = None):
-        self.reader = reader or CSVReader()
-        self.parser = parser or CSVParser()
+class XLSXLoader(FactoryLoader):
+    def __init__(self, reader: XLSXReader = None, parser: XLSXParser = None):
+        self.reader = reader or XLSXReader()
+        self.parser = parser or XLSXParser()
 
     def load(self, path: str) -> Any:
         if not self.exists(path):
@@ -19,10 +19,10 @@ class CSVLoader(FactoryLoader):
 
     def save(self, obj: Any, path: str) -> None:
         if not isinstance(obj, (list, dict, pd.DataFrame)):
-            raise TypeError("Object must be a pandas DataFrame, list, or dict to save as CSV.")
-        
+            raise TypeError("Object must be a pandas DataFrame, list, or dict to save as XLSX.")
+            
         df = pd.DataFrame(obj) if not isinstance(obj, pd.DataFrame) else obj
-        df.to_csv(path, index=False)
+        df.to_excel(path, index=False)
 
     def delete(self, path: str) -> None:
         if self.exists(path):
