@@ -1,0 +1,80 @@
+from typing import Any, Dict, List
+import os
+import sys
+import pandas as pd
+
+# Adiciona o diretório base (raiz do projeto) ao PYTHONPATH
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from src.loaders.jdx_loader import JDXLoader
+from src.loaders.csv_loader import CSVLoader
+from src.processors.formatter import JDXFormatter
+
+def main():
+    # Caminhos para as pastas de dados
+    base_dir: str = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    jdx_folder: str = os.path.join(base_dir, "data", "raw", "jdx", "Soro")
+    output_folder: str = os.path.join(base_dir, "outputs")
+    output_file: str = os.path.join(output_folder, "soro_experiments_consolidated.csv")
+
+    # Verifica se a pasta existe
+    if not os.path.exists(jdx_folder):
+        print(f"Erro: Pasta {jdx_folder} não encontrada.")
+        return
+
+    # Garante que a pasta de outputs exista
+    os.makedirs(output_folder, exist_ok=True)
+
+    # Coleta todos os arquivos jdx
+    jdx_files: List[str] = [f for f in os.listdir(jdx_folder) if f.lower().endswith(".jdx")]
+    
+    if not jdx_files:
+        print(f"Nenhum arquivo JDX encontrado em {jdx_folder}.")
+        return
+
+    print(f"Encontrados {len(jdx_files)} arquivos. Iniciando carregamento...")
+
+    loader: JDXLoader = JDXLoader()
+    formatter: JDXFormatter = JDXFormatter()
+    csv_saver: CSVLoader = CSVLoader()
+
+    jdx_data_list: List[Dict[str, Any]] = []
+    experiment_names: List[str] = []
+
+    # Carrega os dados individualmente
+    for file_name in jdx_files:
+        file_path: str = os.path.join(jdx_folder, file_name)
+        try:
+            print(f"Carregando: {file_name}")
+            data: Dict[str, Any] = loader.load(file_path)
+            
+            # Remove a extensão para compor o nome do experimento (ex: '1_1H')
+            exp_name: str = os.path.splitext(file_name)[0]
+            
+            jdx_data_list.append(data)
+            experiment_names.append(exp_name)
+        except Exception as e:
+            print(f"Erro ao carregar {file_name}: {e}")
+
+    if not jdx_data_list:
+        print("Nenhum dado a ser carregado.")
+        return
+
+    print("Processando e formatando dados...")
+    # Formata a tabela
+    try:
+        final_df: pd.DataFrame = formatter.process(jdx_data_list, experiment_names)
+    except Exception as e:
+        print(f"Erro ao processar dados: {e}")
+        return
+
+    print("Salvando arquivo CSV...")
+    # Salva o arquivo CSV
+    try:
+        csv_saver.save(final_df, output_file)
+        print(f"Arquivo CSV gerado com sucesso em: {output_file}")
+    except Exception as e:
+        print(f"Erro ao salvar o arquivo: {e}")
+
+if __name__ == "__main__":
+    main()
