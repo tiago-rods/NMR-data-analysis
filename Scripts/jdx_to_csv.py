@@ -14,7 +14,7 @@ def main():
     # Caminhos para as pastas de dados
     base_dir: str = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     jdx_folder: str = os.path.join(base_dir, "data", "raw", "jdx", "Soro")
-    output_folder: str = os.path.join(base_dir, "outputs")
+    output_folder: str = os.path.join(base_dir, "outputs", "csv_tables")
     output_file: str = os.path.join(output_folder, "soro_experiments_consolidated.csv")
 
     # Verifica se a pasta existe
@@ -60,7 +60,6 @@ def main():
         print("Nenhum dado a ser carregado.")
         return
 
-    print("Processando e formatando dados...")
     # Formata a tabela
     try:
         final_df: pd.DataFrame = formatter.process(jdx_data_list, experiment_names)
@@ -68,7 +67,6 @@ def main():
         print(f"Erro ao processar dados: {e}")
         return
 
-    print("Salvando arquivo CSV...")
     # Salva o arquivo CSV
     try:
         csv_saver.save(final_df, output_file)
