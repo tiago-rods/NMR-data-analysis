@@ -4,3 +4,5 @@ numpy==2.2.4
 matplotlib==3.10.1
 openpyxl==3.1.5
 scipy==1.16.3
+supabase==0.0.1
+python-dotenv==0.21.0
