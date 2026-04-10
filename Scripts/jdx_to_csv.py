@@ -13,9 +13,9 @@ from src.processors.formatter import JDXFormatter
 def main():
     # Caminhos para as pastas de dados
     base_dir: str = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    jdx_folder: str = os.path.join(base_dir, "data", "raw", "jdx", "Soro") # -> mude a pasta de aquisição de espectros aqui
+    jdx_folder: str = os.path.join(base_dir, "data", "raw", "jdx", "Urina") # -> mude a pasta de aquisição de espectros aqui
     output_folder: str = os.path.join(base_dir, "outputs", "csv_tables") # -> muda a pasta de saída aqui
-    output_file: str = os.path.join(output_folder, "LNBio01_Agilent_500MHz_Soro_size6.csv") # -> mude nome da saída aqui
+    output_file: str = os.path.join(output_folder, "LNBio02_Bruker_600MHz_Urina_size5.csv") # -> mude nome da saída aqui
 
     # Verifica se a pasta existe
     if not os.path.exists(jdx_folder):
@@ -60,9 +60,19 @@ def main():
         print("Nenhum dado a ser carregado.")
         return
 
-    # Formata a tabela
+    # Detector automático de tipo de amostra para calibração
+    sample_type = None
+    if "Soro" in jdx_folder:
+        sample_type = "Soro"
+    elif "Urina" in jdx_folder:
+        sample_type = "Urina"
+
+    if sample_type:
+        print(f"Tipo de amostra detectado: {sample_type}. Aplicando calibração automática de TSP...")
+
+    # Formata a tabela com calibração
     try:
-        final_df: pd.DataFrame = formatter.process(jdx_data_list, experiment_names)
+        final_df: pd.DataFrame = formatter.process(jdx_data_list, experiment_names, sample_type=sample_type)
     except Exception as e:
         print(f"Erro ao processar dados: {e}")
         return

@@ -64,6 +64,6 @@ def plot_nmr_spectra(csv_path: str):
 if __name__ == "__main__":
     # Path to the consolidated CSV relative to the project root
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    csv_file = os.path.join(base_dir, "outputs", "csv_tables", "LNBio01_Bruker_600MHz_Urina_size5.csv")
+    csv_file = os.path.join(base_dir, "outputs", "csv_tables", "LNBio02_Bruker_600MHz_Urina_size5.csv")
     
     plot_nmr_spectra(csv_file)
