@@ -45,7 +45,7 @@ def plot_nmr_spectra(csv_path: str):
     plt.title('NMR Spectra Visualization')
     
     # Legend
-    plt.legend(loc='upper right', fontsize='small', ncol=2)
+    # plt.legend(loc='upper right', fontsize='small', ncol=2)
 
     # Standard NMR Convention: Max PPM on the left, Min PPM on the right
     plt.xlim(ppm.max(), ppm.min())
@@ -53,17 +53,24 @@ def plot_nmr_spectra(csv_path: str):
     plt.grid(True, linestyle='--', alpha=0.6)
     plt.tight_layout()
 
-    # Save the plot as an artifact for the user to see
-    output_image = os.path.join(os.path.dirname(csv_path), "spectra_plot.png")
+    # Save the plot distinctively so it doesn't overwrite
+    basename = os.path.splitext(os.path.basename(csv_path))[0]
+    output_image = os.path.join(os.path.dirname(csv_path), f"spectra_plot_{basename}.png")
     plt.savefig(output_image, dpi=300)
     print(f"Plot saved successfully at: {output_image}")
-
     # Show plot (if environment supports it)
     # plt.show()
 
 if __name__ == "__main__":
     # Path to the consolidated CSV relative to the project root
-    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    csv_file = os.path.join(base_dir, "outputs", "csv_tables", "LNBio02_Bruker_600MHz_Urina_size5.csv")
+    # Since this script is inside tests/fixtures/, we need to go up two directories (.., ..)
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
     
-    plot_nmr_spectra(csv_file)
+    files_to_plot = [
+        "LNBio03_Bruker_600MHz_Urina_size180.csv",
+        "LNBio04_Agilent_500MHz_Soro_size137.csv"
+    ]
+    
+    for fname in files_to_plot:
+        csv_file = os.path.join(base_dir, "outputs", "csv_tables", fname)
+        plot_nmr_spectra(csv_file)

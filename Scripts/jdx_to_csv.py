@@ -13,9 +13,9 @@ from src.processors.formatter import JDXFormatter
 def main():
     # Caminhos para as pastas de dados
     base_dir: str = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    jdx_folder: str = os.path.join(base_dir, "data", "raw", "jdx", "Urina") # -> mude a pasta de aquisição de espectros aqui
+    jdx_folder: str = os.path.join(base_dir, "data", "raw", "jdx", "Soro") # -> mude a pasta de aquisição de espectros aqui
     output_folder: str = os.path.join(base_dir, "outputs", "csv_tables") # -> muda a pasta de saída aqui
-    output_file: str = os.path.join(output_folder, "LNBio02_Bruker_600MHz_Urina_size5.csv") # -> mude nome da saída aqui
+    output_file: str = os.path.join(output_folder, "LNBio04_Agilent_500MHz_Soro_size137.csv") # -> mude nome da saída aqui
 
     # Verifica se a pasta existe
     if not os.path.exists(jdx_folder):
