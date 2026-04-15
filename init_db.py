@@ -9,15 +9,12 @@ from database.migration_runner import MigrationRunner
 from database.seeder import DatabaseSeeder
 
 def main():
-    print("Iniciando processo de configuração do Banco de Dados...")
-    
     # 1. Conecta ao banco de dados usando as credenciais do .env
     db = DataBaseManager()
     
     # Verifica se a conexão foi bem-sucedida (o método connect_supabase já trata erros e devolve a conexão)
     if not db.conn:
         print("ERRO CRÍTICO: Não foi possível conectar ao banco de dados.")
-        print("Verifique seu .env ou sua conexão com a rede (porta 5432).")
         sys.exit(1)
         
     print("Conexão ao banco estabelecida com sucesso!")

@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
+db_backup.txt
 
 # Environments
 .env
@@ -32,3 +33,7 @@ outputs/
 # Logs
 pip-log.txt
 *.log
+
+package-lock.json
+package.json
+node_modules/
