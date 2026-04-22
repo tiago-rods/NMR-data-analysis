@@ -8,7 +8,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src.loaders.jdx_loader import JDXLoader
 from src.loaders.csv_loader import CSVLoader
-from src.processors.formatter import JDXFormatter
+from src.processors.jdx_processor import JDXProcessor
 
 def main():
     # Caminhos para as pastas de dados
@@ -35,7 +35,7 @@ def main():
     print(f"Encontrados {len(jdx_files)} arquivos. Iniciando carregamento...")
 
     loader: JDXLoader = JDXLoader()
-    formatter: JDXFormatter = JDXFormatter()
+    formatter: JDXProcessor = JDXProcessor()
     csv_saver: CSVLoader = CSVLoader()
 
     jdx_data_list: List[Dict[str, Any]] = []

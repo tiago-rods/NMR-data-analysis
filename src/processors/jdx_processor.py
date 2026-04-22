@@ -4,7 +4,7 @@ import numpy as np
 from typing import Any, Dict, List
 from src.processors.factory_processor import FactoryProcessor
 
-class JDXFormatter(FactoryProcessor):
+class JDXProcessor(FactoryProcessor):
     def process(self, jdx_data_list: List[Dict[str, Any]], experiment_names: List[str], sample_type: str = None) -> pd.DataFrame:
         """
         Takes a list of JDX data dictionaries and experiment names.
@@ -18,7 +18,6 @@ class JDXFormatter(FactoryProcessor):
             return pd.DataFrame()
 
         # Define the search window for the reference peak (TSP) based on sample type
-        # Based on user feedback: Soro ~ -4 PPM, Urina ~ -3 PPM
         if sample_type == "Soro":
             window = (-5.0, -2.0)
         elif sample_type == "Urina":
@@ -27,9 +26,6 @@ class JDXFormatter(FactoryProcessor):
             window = (-1.0, 1.0) # Default narrow search
 
         aligned_results = []
-        
-        # We'll use the first experiment's scale (after its own calibration) 
-        # as the master grid for all others to ensure perfect alignment.
         master_ppm_grid = None
 
         for data, exp_name in zip(jdx_data_list, experiment_names):
@@ -52,7 +48,6 @@ class JDXFormatter(FactoryProcessor):
                 sub_ppm = raw_ppm[mask]
                 sub_data = intensities[mask]
                 peak_ppm = sub_ppm[np.argmax(sub_data)]
-                # The shift needed to move peak_ppm to 0.0
                 offset = peak_ppm 
             else:
                 offset = 0.0
@@ -62,12 +57,9 @@ class JDXFormatter(FactoryProcessor):
             
             # 4. Handle consolidation
             if master_ppm_grid is None:
-                # The first experiment defines the target grid
                 master_ppm_grid = corrected_ppm
                 aligned_intensities = intensities
             else:
-                # Interpolate this experiment's data onto the master grid
-                # This handles cases where different files might have slightly different metadata/shifts
                 aligned_intensities = np.interp(master_ppm_grid, corrected_ppm, intensities)
                 
             aligned_results.append((exp_name, aligned_intensities))
