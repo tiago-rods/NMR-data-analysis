@@ -1,89 +1,106 @@
-from typing import Optional
-from typing import Any, Dict, List
-import os
+import logging
 import sys
+from pathlib import Path
+from typing import Any, Optional
+
 import pandas as pd
 
-# Adiciona o diretório base (raiz do projeto) ao PYTHONPATH
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+# Add project root to PYTHONPATH
+_ROOT = Path(__file__).resolve().parent.parent
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
 
-from src.loaders.jdx_loader import JDXLoader
 from src.loaders.csv_loader import CSVLoader
+from src.loaders.jdx_loader import JDXLoader
 from src.processors.jdx_processor import JDXProcessor
 
-def main():
-    # Caminhos para as pastas de dados
-    base_dir: str = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    jdx_folder: str = os.path.join(base_dir, "data", "raw", "jdx", "Soro", "Subdivisao") # -> mude a pasta de aquisição de espectros aqui
-    output_folder: str = os.path.join(base_dir, "outputs", "csv_tables") # -> muda a pasta de saída aqui
-    output_file: str = os.path.join(output_folder, "LNBio12_Agilent_500MHz_Soro_size46.csv") # -> mude nome da saída aqui
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+logger = logging.getLogger(__name__)
 
-    # Verifica se a pasta existe
-    if not os.path.exists(jdx_folder):
-        print(f"Erro: Pasta {jdx_folder} não encontrada.")
+# Sample types and their TSP reference peak search windows (ppm)
+SAMPLE_TYPE_WINDOWS: dict[str, tuple[float, float]] = {
+    "Soro": (-5.0, -2.0),
+    "Urina": (-4.0, -1.0),
+}
+
+
+def _detect_sample_type(folder: Path) -> Optional[str]:
+    """Detects the sample type automatically from the folder path.
+
+    Args:
+        folder: Path to the folder containing JDX files.
+
+    Returns:
+        The sample type name, or None if not detected.
+    """
+    for sample_type in SAMPLE_TYPE_WINDOWS:
+        if sample_type in folder.parts:
+            return sample_type
+    return None
+
+
+def main() -> None:
+    # Data folder paths
+    base_dir: Path = _ROOT
+    jdx_folder: Path = base_dir / "data" / "raw" / "jdx" / "Soro" / "Subdivisao"  # -> change acquisition folder here
+    output_folder: Path = base_dir / "outputs" / "csv_tables"                       # -> change output folder here
+    output_file: Path = output_folder / "LNBio12_Agilent_500MHz_Soro_size46.csv"   # -> change output filename here
+
+    if not jdx_folder.exists():
+        logger.error(f"Folder not found: {jdx_folder}")
         return
 
-    # Garante que a pasta de outputs exista
-    os.makedirs(output_folder, exist_ok=True)
+    output_folder.mkdir(parents=True, exist_ok=True)
 
-    # Coleta todos os arquivos jdx
-    jdx_files: List[str] = [f for f in os.listdir(jdx_folder) if f.lower().endswith(".jdx")]
-    
+    # Collect all JDX files
+    jdx_files: list[Path] = list(jdx_folder.glob("*.jdx"))
+
     if not jdx_files:
-        print(f"Nenhum arquivo JDX encontrado em {jdx_folder}.")
+        logger.warning(f"No JDX files found in: {jdx_folder}")
         return
 
-    print(f"Encontrados {len(jdx_files)} arquivos. Iniciando carregamento...")
+    logger.info(f"Found {len(jdx_files)} files. Starting loading...")
 
     loader: JDXLoader = JDXLoader()
     formatter: JDXProcessor = JDXProcessor()
     csv_saver: CSVLoader = CSVLoader()
 
-    jdx_data_list: List[Dict[str, Any]] = []
-    experiment_names: List[str] = []
+    jdx_data_list: list[dict[str, Any]] = []
+    experiment_names: list[str] = []
 
-    # Carrega os dados individualmente
-    for file_name in jdx_files:
-        file_path: str = os.path.join(jdx_folder, file_name)
+    # Load files individually (EAFP: try and catch exceptions)
+    for jdx_file in jdx_files:
         try:
-            print(f"Carregando: {file_name}")
-            data: Dict[str, Any] = loader.load(file_path)
-            
-            # Remove a extensão para compor o nome do experimento (ex: '1_1H')
-            exp_name: str = os.path.splitext(file_name)[0]
-            
+            logger.info(f"Loading: {jdx_file.name}")
+            data: dict[str, Any] = loader.load(str(jdx_file))
             jdx_data_list.append(data)
-            experiment_names.append(exp_name)
+            experiment_names.append(jdx_file.stem)  # .stem strips the extension
         except Exception as e:
-            print(f"Erro ao carregar {file_name}: {e}")
+            logger.error(f"Failed to load {jdx_file.name}: {e}")
 
     if not jdx_data_list:
-        print("Nenhum dado a ser carregado.")
+        logger.warning("No data loaded successfully.")
         return
 
-    # Detector automático de tipo de amostra para calibração
-    sample_type: Optional[str] = None
-    if "Soro" in jdx_folder:
-        sample_type = "Soro"
-    elif "Urina" in jdx_folder:
-        sample_type = "Urina"
-
+    # Auto-detect sample type for TSP calibration
+    sample_type: Optional[str] = _detect_sample_type(jdx_folder)
     if sample_type:
-        print(f"Tipo de amostra detectado: {sample_type}. Aplicando calibração automática de TSP...")
+        logger.info(f"Sample type detected: '{sample_type}'. Applying automatic TSP calibration...")
 
-    # Formata a tabela com calibração
+    # Process and calibrate spectra
     try:
         final_df: pd.DataFrame = formatter.process(jdx_data_list, experiment_names, sample_type=sample_type)
     except Exception as e:
-        print(f"Erro ao processar dados: {e}")
+        logger.error(f"Failed to process data: {e}")
         return
 
-    # Salva o arquivo CSV
+    # Save consolidated CSV
     try:
-        csv_saver.save(final_df, output_file)
-        print(f"Arquivo CSV gerado com sucesso em: {output_file}")
+        csv_saver.save(final_df, str(output_file))
+        logger.info(f"CSV file successfully generated at: {output_file}")
     except Exception as e:
-        print(f"Erro ao salvar o arquivo: {e}")
+        logger.error(f"Failed to save file: {e}")
+
 
 if __name__ == "__main__":
     main()

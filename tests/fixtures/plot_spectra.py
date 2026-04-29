@@ -1,83 +1,79 @@
-import pandas as pd
-import matplotlib.pyplot as plt
-import os
+import logging
 import sys
-# Add project root to sys.path to allow absolute imports
-root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-if root_path not in sys.path:
-    sys.path.append(root_path)
+from pathlib import Path
+
+import matplotlib.pyplot as plt
+import pandas as pd
+
+# Add project root to PYTHONPATH
+_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
 
 from src.readers.csv_reader import CSVReader
 
-def plot_nmr_spectra(csv_path: str):
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+logger = logging.getLogger(__name__)
+
+
+def plot_nmr_spectra(csv_path: Path) -> None:
+    """Reads a consolidated NMR CSV and plots its spectra.
+
+    Follows the NMR convention: maximum PPM on the left, minimum on the right.
+
+    Args:
+        csv_path: Path to the consolidated NMR CSV file.
     """
-    Reads an NMR consolidated CSV and plots the spectra using matplotlib.
-    Follows the standard NMR convention: PPM maximum on the left, 0 or minimum on the right.
-    """
-    if not os.path.exists(csv_path):
-        print(f"Error: File {csv_path} not found.")
+    if not csv_path.exists():
+        logger.error(f"File not found: {csv_path}")
         return
 
-    print(f"Reading data from {csv_path}...")
+    logger.info(f"Reading data from: {csv_path}")
     try:
         reader: CSVReader = CSVReader()
-        df: pd.DataFrame = reader.read(csv_path)
+        df: pd.DataFrame = reader.read(str(csv_path))
     except Exception as e:
-        print(f"Error reading CSV: {e}")
+        logger.error(f"Error reading CSV: {e}")
         return
 
-    if 'PPM' not in df.columns:
-        print("Error: 'PPM' column not found in the CSV.")
+    if "PPM" not in df.columns:
+        logger.error("Column 'PPM' not found in the CSV.")
         return
 
-    # Extract PPM scale
-    ppm: pd.Series = df['PPM']
-    
-    # All other columns are experiments
-    experiments: list[str] = [col for col in df.columns if col != 'PPM']
+    ppm: pd.Series = df["PPM"]
+    experiments: list[str] = [col for col in df.columns if col != "PPM"]
 
     if not experiments:
-        print("No experiment columns found in the CSV.")
+        logger.warning("No experiment columns found in the CSV.")
         return
 
     plt.figure(figsize=(12, 6))
-
-    # Plot each experiment with a distinct color
     for exp in experiments:
         plt.plot(ppm, df[exp], label=exp, linewidth=1)
 
-    # Set labels and title
-    plt.xlabel('Chemical Shift (PPM)')
-    plt.ylabel('Intensity')
-    plt.title('NMR Spectra Visualization')
-    
-    # Legend
+    plt.xlabel("Chemical Shift (PPM)")
+    plt.ylabel("Intensity")
+    plt.title("NMR Spectra Visualization")
     # plt.legend(loc='upper right', fontsize='small', ncol=2)
 
-    # Standard NMR Convention: Max PPM on the left, Min PPM on the right
+    # NMR convention: maximum PPM on the left
     plt.xlim(ppm.max(), ppm.min())
-
-    plt.grid(True, linestyle='--', alpha=0.6)
+    plt.grid(True, linestyle="--", alpha=0.6)
     plt.tight_layout()
 
-    # Save the plot distinctively so it doesn't overwrite
-    basename: str = os.path.splitext(os.path.basename(csv_path))[0]
-    output_image: str = os.path.join(os.path.dirname(csv_path), f"spectra_plot_{basename}.png")
+    output_image: Path = csv_path.parent / f"spectra_plot_{csv_path.stem}.png"
     plt.savefig(output_image, dpi=300)
-    print(f"Plot saved successfully at: {output_image}")
-    # Show plot (if environment supports it)
+    logger.info(f"Plot saved to: {output_image}")
     # plt.show()
 
+
 if __name__ == "__main__":
-    # Path to the consolidated CSV relative to the project root
-    # Since this script is inside tests/fixtures/, we need to go up two directories (.., ..)
-    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-    
-    files_to_plot = [
+    base_dir: Path = Path(__file__).resolve().parent.parent.parent / "outputs" / "csv_tables"
+
+    files_to_plot: list[str] = [
         "LNBio03_Bruker_600MHz_Urina_size180.csv",
-        "LNBio04_Agilent_500MHz_Soro_size137.csv"
+        "LNBio04_Agilent_500MHz_Soro_size137.csv",
     ]
-    
+
     for fname in files_to_plot:
-        csv_file = os.path.join(base_dir, "outputs", "csv_tables", fname)
-        plot_nmr_spectra(csv_file)
+        plot_nmr_spectra(base_dir / fname)
