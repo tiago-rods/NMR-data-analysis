@@ -10,18 +10,18 @@ class CSVLoader(FactoryLoader):
         self.reader = reader or CSVReader()
         self.parser = parser or CSVParser()
 
-    def load(self, path: str) -> Any:
+    def load(self, path: str, **kwargs) -> Any:
         if not self.exists(path):
             raise FileNotFoundError(f"File not found: {path}")
             
-        raw_data = self.reader.read(path)
+        raw_data: Any = self.reader.read(path, **kwargs)
         return self.parser.parse(raw_data)
 
     def save(self, obj: Any, path: str) -> None:
         if not isinstance(obj, (list, dict, pd.DataFrame)):
             raise TypeError("Object must be a pandas DataFrame, list, or dict to save as CSV.")
         
-        df = pd.DataFrame(obj) if not isinstance(obj, pd.DataFrame) else obj
+        df: pd.DataFrame = pd.DataFrame(obj) if not isinstance(obj, pd.DataFrame) else obj
         df.to_csv(path, index=False)
 
     def delete(self, path: str) -> None:

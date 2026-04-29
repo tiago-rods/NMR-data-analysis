@@ -1,10 +1,12 @@
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 import os
+from src.readers.csv_reader import CSVReader
 
 class FactoryCSVFormatter(ABC):
     def __init__(self, output_dir: str = "data/processed/formatted"):
         self.output_dir = output_dir
+        self.reader = CSVReader()
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
 

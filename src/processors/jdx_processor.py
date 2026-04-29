@@ -1,7 +1,7 @@
 import pandas as pd
 import nmrglue as ng
 import numpy as np
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from src.processors.factory_processor import FactoryProcessor
 
 class JDXProcessor(FactoryProcessor):
@@ -18,6 +18,7 @@ class JDXProcessor(FactoryProcessor):
             return pd.DataFrame()
 
         # Define the search window for the reference peak (TSP) based on sample type
+        window: tuple[float, float]
         if sample_type == "Soro":
             window = (-5.0, -2.0)
         elif sample_type == "Urina":
@@ -25,17 +26,17 @@ class JDXProcessor(FactoryProcessor):
         else:
             window = (-1.0, 1.0) # Default narrow search
 
-        aligned_results = []
-        master_ppm_grid = None
+        aligned_results: list[tuple[str, np.ndarray]] = []
+        master_ppm_grid: Optional[np.ndarray] = None
 
         for data, exp_name in zip(jdx_data_list, experiment_names):
             # 1. Get raw PPM scale for this file
-            dic = data["metadata"]
-            intensities = np.array(data["spectral_data"])
+            dic: dict[str, Any] = data["metadata"]
+            intensities: np.ndarray = np.array(data["spectral_data"])
             
-            udic = ng.jcampdx.guess_udic(dic, intensities)
-            uc = ng.fileiobase.uc_from_udic(udic)
-            raw_ppm = uc.ppm_scale()
+            udic: dict[str, Any] = ng.jcampdx.guess_udic(dic, intensities)
+            uc: ng.fileiobase.unit_conversion = ng.fileiobase.uc_from_udic(udic)
+            raw_ppm: np.ndarray = uc.ppm_scale()
             
             # Ensure ascending order for calibration and interpolation
             if len(raw_ppm) > 1 and raw_ppm[0] > raw_ppm[-1]:
@@ -43,29 +44,29 @@ class JDXProcessor(FactoryProcessor):
                 intensities = intensities[::-1]
             
             # 2. Find the reference peak (TSP) in the search window
-            mask = (raw_ppm >= window[0]) & (raw_ppm <= window[1])
+            mask: np.ndarray = (raw_ppm >= window[0]) & (raw_ppm <= window[1])
             if np.any(mask):
-                sub_ppm = raw_ppm[mask]
-                sub_data = intensities[mask]
-                peak_ppm = sub_ppm[np.argmax(sub_data)]
-                offset = peak_ppm 
+                sub_ppm: np.ndarray = raw_ppm[mask]
+                sub_data: np.ndarray = intensities[mask]
+                peak_ppm: float = sub_ppm[np.argmax(sub_data)]
+                offset: float = peak_ppm 
             else:
-                offset = 0.0
+                offset: float = 0.0
             
             # 3. Apply the shift to the scale
-            corrected_ppm = raw_ppm - offset
+            corrected_ppm: np.ndarray = raw_ppm - offset
             
             # 4. Handle consolidation
             if master_ppm_grid is None:
                 master_ppm_grid = corrected_ppm
-                aligned_intensities = intensities
+                aligned_intensities: np.ndarray = intensities
             else:
                 aligned_intensities = np.interp(master_ppm_grid, corrected_ppm, intensities)
                 
             aligned_results.append((exp_name, aligned_intensities))
             
         # Build the final DataFrame
-        df_dict = {
+        df_dict: dict[str, np.ndarray] = {
             "PPM": master_ppm_grid
         }
         for name, values in aligned_results:

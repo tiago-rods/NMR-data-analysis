@@ -14,14 +14,14 @@ class MagMetFormatter(FactoryCSVFormatter):
             with open(file_path, 'r') as f:
                 lines = f.readlines()
             
-            header_idx = 0
+            header_idx: int = 0
             for i, line in enumerate(lines):
                 if line.startswith('HMDB ID'):
                     header_idx = i
                     break
             
             # Read CSV starting from header row
-            df: pd.DataFrame = pd.read_csv(file_path, skiprows=header_idx)
+            df: pd.DataFrame = self.reader.read(file_path, skiprows=header_idx)
             
             # Drop HMDB ID column if it exists
             if 'HMDB ID' in df.columns:
@@ -41,10 +41,10 @@ class MagMetFormatter(FactoryCSVFormatter):
             
             # Ensure numeric values
             df = df.apply(pd.to_numeric, errors='coerce').fillna(0)
-
+ 
             # Save to common format
-            filename = os.path.basename(file_path)
-            output_path = os.path.join(self.output_dir, f"formatted_{filename}")
+            filename: str = os.path.basename(file_path)
+            output_path: str = os.path.join(self.output_dir, f"formatted_{filename}")
             df.to_csv(output_path)
             print(f"Formatted MagMet file saved to: {output_path}")
             return output_path

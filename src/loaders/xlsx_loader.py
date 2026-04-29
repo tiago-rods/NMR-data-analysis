@@ -10,11 +10,11 @@ class XLSXLoader(FactoryLoader):
         self.reader = reader or XLSXReader()
         self.parser = parser or XLSXParser()
 
-    def load(self, path: str) -> Any:
+    def load(self, path: str, **kwargs) -> Any:
         if not self.exists(path):
             raise FileNotFoundError(f"File not found: {path}")
             
-        raw_data = self.reader.read(path)
+        raw_data = self.reader.read(path, **kwargs)
         return self.parser.parse(raw_data)
 
     def save(self, obj: Any, path: str) -> None:

@@ -2,6 +2,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 import sys
+# Add project root to sys.path to allow absolute imports
+root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+if root_path not in sys.path:
+    sys.path.append(root_path)
+
+from src.readers.csv_reader import CSVReader
 
 def plot_nmr_spectra(csv_path: str):
     """
@@ -14,7 +20,8 @@ def plot_nmr_spectra(csv_path: str):
 
     print(f"Reading data from {csv_path}...")
     try:
-        df = pd.read_csv(csv_path)
+        reader: CSVReader = CSVReader()
+        df: pd.DataFrame = reader.read(csv_path)
     except Exception as e:
         print(f"Error reading CSV: {e}")
         return
@@ -24,10 +31,10 @@ def plot_nmr_spectra(csv_path: str):
         return
 
     # Extract PPM scale
-    ppm = df['PPM']
+    ppm: pd.Series = df['PPM']
     
     # All other columns are experiments
-    experiments = [col for col in df.columns if col != 'PPM']
+    experiments: list[str] = [col for col in df.columns if col != 'PPM']
 
     if not experiments:
         print("No experiment columns found in the CSV.")
@@ -54,8 +61,8 @@ def plot_nmr_spectra(csv_path: str):
     plt.tight_layout()
 
     # Save the plot distinctively so it doesn't overwrite
-    basename = os.path.splitext(os.path.basename(csv_path))[0]
-    output_image = os.path.join(os.path.dirname(csv_path), f"spectra_plot_{basename}.png")
+    basename: str = os.path.splitext(os.path.basename(csv_path))[0]
+    output_image: str = os.path.join(os.path.dirname(csv_path), f"spectra_plot_{basename}.png")
     plt.savefig(output_image, dpi=300)
     print(f"Plot saved successfully at: {output_image}")
     # Show plot (if environment supports it)

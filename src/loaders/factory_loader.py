@@ -3,7 +3,7 @@ from typing import Any
 
 class FactoryLoader(ABC):
     @abstractmethod
-    def load(self, path: str) -> Any:
+    def load(self, path: str, **kwargs) -> Any:
         """
         Loads data from the specified path.
         """

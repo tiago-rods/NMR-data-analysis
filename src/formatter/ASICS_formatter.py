@@ -11,7 +11,7 @@ class ASICSFormatter(FactoryCSVFormatter):
         """
         try:
             # Read CSV
-            df = pd.read_csv(file_path, index_col=0)
+            df: pd.DataFrame = self.reader.read(file_path, index_col=0)
             
             # Clean experiment names (columns)
             df.columns = [str(col).replace('"', '').strip() for col in df.columns]
@@ -21,8 +21,8 @@ class ASICSFormatter(FactoryCSVFormatter):
             df.index.name = 'metabolite'
             
             # Save to common format
-            filename = os.path.basename(file_path)
-            output_path = os.path.join(self.output_dir, f"formatted_{filename}")
+            filename: str = os.path.basename(file_path)
+            output_path: str = os.path.join(self.output_dir, f"formatted_{filename}")
             df.to_csv(output_path)
             print(f"Formatted ASICS file saved to: {output_path}")
             return output_path
