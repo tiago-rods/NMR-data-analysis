@@ -8,6 +8,8 @@ db_backup.txt
 .env
 .venv
 env/
+/venv/
+.venv/
 venv/
 ENV/
 env.bak/
@@ -37,3 +39,4 @@ pip-log.txt
 package-lock.json
 package.json
 node_modules/
+venv/Lib/site-packages/_distutils_hack/__pycache__/__init__.cpython-311.pyc
