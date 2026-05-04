@@ -5,7 +5,7 @@ from typing import Optional
 import pandas as pd
 
 from src.formatter.factory_csv_formatter import FactoryCSVFormatter
-from src.processors.cleaner import ASICSCleaner
+from src.cleaners.ASICS_cleaner import ASICSCleaner
 
 logger = logging.getLogger(__name__)
 

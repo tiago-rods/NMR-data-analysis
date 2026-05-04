@@ -5,7 +5,7 @@ import pandas as pd
 
 from src.processors.factory_processor import FactoryProcessor
 from src.readers.csv_reader import CSVReader
-from src.processors.cleaner import Cleaner
+from src.cleaners.factory_cleaner import Cleaner
 from src.formatter.factory_csv_formatter import FactoryCSVFormatter
 
 logger = logging.getLogger(__name__)

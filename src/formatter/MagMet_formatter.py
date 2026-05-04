@@ -5,7 +5,7 @@ from typing import Optional
 import pandas as pd
 
 from src.formatter.factory_csv_formatter import FactoryCSVFormatter
-from src.processors.cleaner import MagMetCleaner
+from src.cleaners.MagMet_cleaner import MagMetCleaner
 
 logger = logging.getLogger(__name__)
 

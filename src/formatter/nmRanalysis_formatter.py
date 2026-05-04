@@ -5,7 +5,7 @@ from typing import Optional
 import pandas as pd
 
 from src.formatter.factory_csv_formatter import FactoryCSVFormatter
-from src.processors.cleaner import NmRanalysisCleaner
+from src.cleaners.nmRanalysis_cleaner import NmRanalysisCleaner
 
 logger = logging.getLogger(__name__)
 
