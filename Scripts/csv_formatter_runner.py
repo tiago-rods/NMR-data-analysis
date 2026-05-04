@@ -2,6 +2,7 @@ import logging
 import sys
 from pathlib import Path
 from typing import Optional
+import pandas as pd
 
 # Add project root to PYTHONPATH
 _ROOT = Path(__file__).resolve().parent.parent
@@ -108,6 +109,6 @@ if __name__ == "__main__":
     process_all_files(
         asics_dir=project_root / "data" / "processed" / "ASICS",
         magmet_dir=project_root / "data" / "processed" / "MagMet",
-        nmranalysis_dir=project_root / "data" / "raw" / "nmRanalysis",
+        nmranalysis_dir=project_root / "data" / "processed" / "nmRanalysis",
         output_base_dir=project_root / "data" / "processed" / "formatted",
     )

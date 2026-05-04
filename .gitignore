@@ -6,10 +6,8 @@ db_backup.txt
 
 # Environments
 .env
-.venv
-env/
-/venv/
 .venv/
+env/
 venv/
 ENV/
 env.bak/
@@ -36,9 +34,14 @@ outputs/
 pip-log.txt
 *.log
 
+# Build / Packages
 package-lock.json
 package.json
 node_modules/
-venv/Lib/site-packages/_distutils_hack/__pycache__/__init__.cpython-311.pyc
 
+# Testing
 .pytest_cache/
+
+# General patterns for caches
+**/__pycache__/
+**/.pytest_cache/

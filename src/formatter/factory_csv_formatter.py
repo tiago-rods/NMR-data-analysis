@@ -2,6 +2,7 @@ import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Optional
+import pandas as pd
 
 from src.readers.csv_reader import CSVReader
 
