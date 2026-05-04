@@ -5,6 +5,7 @@ from typing import Optional
 import pandas as pd
 
 from src.formatter.factory_csv_formatter import FactoryCSVFormatter
+from src.processors.cleaner import ASICSCleaner
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +15,9 @@ class ASICSFormatter(FactoryCSVFormatter):
 
     ASICS format: rows are metabolites, columns are experiments.
     """
+
+    def __init__(self, output_dir: str = "data/processed/formatted") -> None:
+        super().__init__(output_dir, cleaner=ASICSCleaner())
 
     def format(self, file_path: str) -> Optional[str]:
         """Formats an ASICS CSV into the project's standardized schema.
@@ -25,17 +29,19 @@ class ASICSFormatter(FactoryCSVFormatter):
             Path to the formatted output file, or None on failure.
         """
         try:
+            # 1. Read
             df: pd.DataFrame = self.reader.read(file_path, index_col=0)
 
-            # Clean experiment names (columns) and metabolite names (index)
-            df.columns = [str(col).replace('"', '').strip() for col in df.columns]
-            df.index = [str(idx).replace('"', '').strip() for idx in df.index]
-            df.index.name = "metabolite"
+            # 2. Clean (using the injected cleaner)
+            if self.cleaner:
+                df = self.cleaner.clean(df)
 
+            # 3. Save
             output_path: Path = self.output_dir / f"formatted_{Path(file_path).name}"
             df.to_csv(output_path)
             logger.info(f"Formatted ASICS file saved to: {output_path}")
             return str(output_path)
+
         except Exception as e:
             logger.error(f"Error processing ASICS file '{file_path}': {e}")
             return None

@@ -15,9 +15,14 @@ class FactoryCSVFormatter(ABC):
     tool-specific CSV into the project's standardized schema.
     """
 
-    def __init__(self, output_dir: str = "data/processed/formatted") -> None:
+    def __init__(
+        self,
+        output_dir: str = "data/processed/formatted",
+        cleaner: Optional[Any] = None
+    ) -> None:
         self.output_dir: Path = Path(output_dir)
         self.reader: CSVReader = CSVReader()
+        self.cleaner = cleaner
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
     @abstractmethod
