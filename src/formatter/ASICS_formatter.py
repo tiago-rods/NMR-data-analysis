@@ -16,32 +16,14 @@ class ASICSFormatter(FactoryCSVFormatter):
     ASICS format: rows are metabolites, columns are experiments.
     """
 
-    def __init__(self, output_dir: str = "data/processed/formatted") -> None:
-        super().__init__(output_dir, cleaner=ASICSCleaner())
-
-    def format(self, file_path: str) -> Optional[str]:
-        """Formats an ASICS CSV into the project's standardized schema.
+    def format(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Formats an ASICS DataFrame into the project's standardized schema.
 
         Args:
-            file_path: Path to the ASICS CSV file.
+            df: The cleaned ASICS DataFrame.
 
         Returns:
-            Path to the formatted output file, or None on failure.
+            The formatted DataFrame.
         """
-        try:
-            # 1. Read
-            df: pd.DataFrame = self.reader.read(file_path, index_col=0)
-
-            # 2. Clean (using the injected cleaner)
-            if self.cleaner:
-                df = self.cleaner.clean(df)
-
-            # 3. Save
-            output_path: Path = self.output_dir / f"formatted_{Path(file_path).name}"
-            df.to_csv(output_path)
-            logger.info(f"Formatted ASICS file saved to: {output_path}")
-            return str(output_path)
-
-        except Exception as e:
-            logger.error(f"Error processing ASICS file '{file_path}': {e}")
-            return None
+        # Data is already correctly formatted by the cleaner
+        return df

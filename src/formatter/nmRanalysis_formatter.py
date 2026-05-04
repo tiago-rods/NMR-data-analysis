@@ -17,37 +17,19 @@ class NmRanalysisFormatter(FactoryCSVFormatter):
     rows = metabolites, columns = samples.
     """
 
-    def __init__(self, output_dir: str = "data/processed/formatted") -> None:
-        super().__init__(output_dir, cleaner=NmRanalysisCleaner())
-
-    def format(self, file_path: str) -> Optional[str]:
-        """Formats an nmRanalysis CSV into the project's standardized schema.
+    def format(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Formats an nmRanalysis DataFrame into the project's standardized schema.
 
         Args:
-            file_path: Path to the nmRanalysis CSV file.
+            df: The cleaned nmRanalysis DataFrame.
 
         Returns:
-            Path to the formatted output file, or None on failure.
+            The pivoted DataFrame.
         """
-        try:
-            # 1. Read
-            df: pd.DataFrame = self.reader.read(file_path, thousands=",")
-
-            # 2. Clean (using the injected cleaner)
-            if self.cleaner:
-                df = self.cleaner.clean(df)
-
-            # 3. Format (Pivot)
-            pivot_df: pd.DataFrame = df.pivot(
-                index="Base_Metabolite", columns="Sample", values="Quantity"
-            ).fillna(0.0)
-            pivot_df.index.name = "metabolite"
-
-            output_path: Path = self.output_dir / f"formatted_{Path(file_path).name}"
-            pivot_df.to_csv(output_path)
-            logger.info(f"Formatted nmRanalysis file saved to: {output_path}")
-            return str(output_path)
-
-        except Exception as e:
-            logger.error(f"Error processing nmRanalysis file '{file_path}': {e}")
-            return None
+        # Format (Pivot)
+        pivot_df: pd.DataFrame = df.pivot(
+            index="Base_Metabolite", columns="Sample", values="Quantity"
+        ).fillna(0.0)
+        pivot_df.index.name = "metabolite"
+        
+        return pivot_df

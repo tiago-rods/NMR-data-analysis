@@ -12,26 +12,17 @@ class FactoryCSVFormatter(ABC):
     """Abstract base class for NMR tool CSV formatters.
 
     Each subclass must implement the `format` method to convert a
-    tool-specific CSV into the project's standardized schema.
+    tool-specific DataFrame into the project's standardized schema.
     """
 
-    def __init__(
-        self,
-        output_dir: str = "data/processed/formatted",
-        cleaner: Optional[Any] = None
-    ) -> None:
-        self.output_dir: Path = Path(output_dir)
-        self.reader: CSVReader = CSVReader()
-        self.cleaner = cleaner
-        self.output_dir.mkdir(parents=True, exist_ok=True)
-
     @abstractmethod
-    def format(self, file_path: str) -> Optional[str]:
-        """Formats a CSV file into the project's standardized schema.
+    def format(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Formats a DataFrame into the project's standardized schema.
 
         Args:
-            file_path: Path to the CSV file to be formatted.
+            df: The DataFrame to be formatted.
 
         Returns:
-            Path to the generated output file, or None on failure.
+            The formatted DataFrame.
         """
+        pass

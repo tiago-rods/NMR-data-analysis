@@ -19,14 +19,17 @@ class DataProcessor(FactoryProcessor):
     def __init__(
         self,
         reader: Any,
+        output_dir: str,
         cleaner: Optional[Cleaner] = None,
         formatter: Optional[FactoryCSVFormatter] = None
     ):
         self.reader = reader
+        self.output_dir = Path(output_dir)
+        self.output_dir.mkdir(parents=True, exist_ok=True)
         self.cleaner = cleaner
         self.formatter = formatter
 
-    def process(self, file_path: str, **kwargs) -> Optional[pd.DataFrame]:
+    def process(self, file_path: str, **kwargs) -> Optional[str]:
         """
         Executes the processing pipeline for a single file.
         """
@@ -40,9 +43,15 @@ class DataProcessor(FactoryProcessor):
             if self.cleaner:
                 df = self.cleaner.clean(df)
 
-            # 3. Format (Note: Current formatters handle saving, we might want to change this)
-            # For now, let's just return the cleaned/formatted DataFrame
-            return df
+            # 3. Format
+            if self.formatter:
+                df = self.formatter.format(df)
+
+            # 4. Save
+            output_path = self.output_dir / f"formatted_{Path(file_path).name}"
+            df.to_csv(output_path)
+            logger.info(f"Saved to: {output_path}")
+            return str(output_path)
 
         except Exception as e:
             logger.error(f"Error in processing pipeline for {file_path}: {e}")
