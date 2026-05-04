@@ -8,12 +8,27 @@ _ROOT = Path(__file__).resolve().parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
+from src.readers.csv_reader import CSVReader
+from src.processors.data_processor import DataProcessor
+
+from src.cleaners.ASICS_cleaner import ASICSCleaner
+from src.cleaners.MagMet_cleaner import MagMetCleaner
+from src.cleaners.nmRanalysis_cleaner import NmRanalysisCleaner
+
 from src.formatter.ASICS_formatter import ASICSFormatter
 from src.formatter.MagMet_formatter import MagMetFormatter
 from src.formatter.nmRanalysis_formatter import NmRanalysisFormatter
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
+
+
+def find_magmet_header_index(file_path: Path) -> int:
+    with open(file_path, "r") as f:
+        for idx, line in enumerate(f):
+            if line.startswith("HMDB ID"):
+                return idx
+    return 0
 
 
 def process_all_files(
@@ -67,18 +82,22 @@ def process_all_files(
         f"{len(nmranalysis_files)} nmRanalysis"
     )
 
-    # Map each file set to its corresponding formatter
-    tasks: list[tuple] = [
-        (asics_files, asics_formatter),
-        (magmet_files, magmet_formatter),
-        (nmranalysis_files, nmranalysis_formatter),
-    ]
+    results: list[Optional[str]] = []
 
-    results: list[Optional[str]] = [
-        formatter.format(str(file))
-        for files, formatter in tasks
-        for file in files
-    ]
+    # Process ASICS
+    for file in asics_files:
+        # ASICS index_col=0 handled via kwargs
+        results.append(asics_processor.process(str(file), index_col=0))
+
+    # Process MagMet
+    for file in magmet_files:
+        # Locate header for MagMet
+        header_idx = find_magmet_header_index(file)
+        results.append(magmet_processor.process(str(file), skiprows=header_idx))
+
+    # Process nmRanalysis
+    for file in nmranalysis_files:
+        results.append(nmranalysis_processor.process(str(file), thousands=","))
 
     return results
 
