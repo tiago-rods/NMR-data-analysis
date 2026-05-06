@@ -24,27 +24,33 @@ SAMPLE_TYPE_WINDOWS: dict[str, tuple[float, float]] = {
 }
 
 
-def _detect_sample_type(folder: Path) -> Optional[str]:
-    """Detects the sample type automatically from the folder path.
+def _detect_sample_type(folder: Path, output_file: Path) -> Optional[str]:
+    """Detects the sample type automatically from the folder path or output filename.
 
     Args:
         folder: Path to the folder containing JDX files.
+        output_file: Path to the output CSV file.
 
     Returns:
-        The sample type name, or None if not detected.
+        The sample type name ('Soro' or 'Urina'), or None if not detected.
     """
-    for sample_type in SAMPLE_TYPE_WINDOWS:
-        if sample_type in folder.parts:
-            return sample_type
+    # Combine both paths into a single lower-case string for searching
+    full_context = (str(folder) + str(output_file)).lower()
+
+    if "urina" in full_context:
+        return "Urina"
+    if "soro" in full_context:
+        return "Soro"
+    
     return None
 
 
 def main() -> None:
     # Data folder paths
     base_dir: Path = _ROOT
-    jdx_folder: Path = base_dir / "data" / "raw" / "jdx" / "Soro" / "Subdivisao"  # -> change acquisition folder here
+    jdx_folder: Path = base_dir / "data" / "raw" / "jdx" / "Urina" / "Subdivisao_3"  # -> change acquisition folder here
     output_folder: Path = base_dir / "outputs" / "csv_tables"                       # -> change output folder here
-    output_file: Path = output_folder / "LNBio12_Agilent_500MHz_Soro_size46.csv"   # -> change output filename here
+    output_file: Path = output_folder / "LNBio16_Bruker_600MHz_Urina_size45.csv"   # -> change output filename here
 
     if not jdx_folder.exists():
         logger.error(f"Folder not found: {jdx_folder}")
@@ -83,7 +89,7 @@ def main() -> None:
         return
 
     # Auto-detect sample type for TSP calibration
-    sample_type: Optional[str] = _detect_sample_type(jdx_folder)
+    sample_type: Optional[str] = _detect_sample_type(jdx_folder, output_file)
     if sample_type:
         logger.info(f"Sample type detected: '{sample_type}'. Applying automatic TSP calibration...")
 

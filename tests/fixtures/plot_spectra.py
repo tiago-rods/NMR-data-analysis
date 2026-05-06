@@ -61,7 +61,10 @@ def plot_nmr_spectra(csv_path: Path) -> None:
     plt.grid(True, linestyle="--", alpha=0.6)
     plt.tight_layout()
 
-    output_image: Path = csv_path.parent / f"spectra_plot_{csv_path.stem}.png"
+    output_dir: Path = _ROOT / "outputs" / "spectra_images"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    output_image: Path = output_dir / f"spectra_plot_{csv_path.stem}.png"
     plt.savefig(output_image, dpi=300)
     logger.info(f"Plot saved to: {output_image}")
     # plt.show()
@@ -71,8 +74,7 @@ if __name__ == "__main__":
     base_dir: Path = Path(__file__).resolve().parent.parent.parent / "outputs" / "csv_tables"
 
     files_to_plot: list[str] = [
-        "LNBio03_Bruker_600MHz_Urina_size180.csv",
-        "LNBio04_Agilent_500MHz_Soro_size137.csv",
+        "LNBio17_Bruker_600MHz_Urina_size45.csv"
     ]
 
     for fname in files_to_plot:
