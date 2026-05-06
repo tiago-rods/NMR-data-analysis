@@ -74,7 +74,7 @@ if __name__ == "__main__":
     base_dir: Path = Path(__file__).resolve().parent.parent.parent / "outputs" / "csv_tables"
 
     files_to_plot: list[str] = [
-        "LNBio17_Bruker_600MHz_Urina_size45.csv"
+        "LNBio14_Bruker_600MHz_Urina_size45.csv"
     ]
 
     for fname in files_to_plot:

@@ -48,9 +48,9 @@ def _detect_sample_type(folder: Path, output_file: Path) -> Optional[str]:
 def main() -> None:
     # Data folder paths
     base_dir: Path = _ROOT
-    jdx_folder: Path = base_dir / "data" / "raw" / "jdx" / "Urina" / "Subdivisao_3"  # -> change acquisition folder here
+    jdx_folder: Path = base_dir / "data" / "raw" / "jdx" / "Urina" / "Subdivisao"  # -> change acquisition folder here
     output_folder: Path = base_dir / "outputs" / "csv_tables"                       # -> change output folder here
-    output_file: Path = output_folder / "LNBio16_Bruker_600MHz_Urina_size45.csv"   # -> change output filename here
+    output_file: Path = output_folder / "LNBio14_Bruker_600MHz_Urina_size45.csv"   # -> change output filename here
 
     if not jdx_folder.exists():
         logger.error(f"Folder not found: {jdx_folder}")
