@@ -10,9 +10,10 @@ OUTPUT_FILE = INPUT_DIR / 'concatenated_quantification.csv'
 
 # Lista específica de arquivos solicitada
 QUANT_FILES = [
-    'formatted_LNBio10_Agilent_nmRanalysis_Soro_size45_quantification.csv',
-    'formatted_LNBio11_Agilent_nmRanalysis_Soro_size46_quantification.csv',
-    'formatted_LNBio12_Agilent_nmRanalysis_Soro_size46_quantification.csv'
+    'formatted_LNBio14_nmRanalysis_Urina_size45_unedited.csv',
+    'formatted_LNBio15_nmRanalysis_Urina_size45_unedited.csv',
+    'formatted_LNBio16_nmRanalysis_Urina_size45_unedited.csv',
+    'formatted_LNBio17_nmRanalysis_Urina_size45_unedited.csv',
 ]
 
 def sort_key(col_name: str) -> Union[int, str]:
