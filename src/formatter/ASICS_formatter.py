@@ -18,12 +18,15 @@ class ASICSFormatter(FactoryCSVFormatter):
 
     def format(self, df: pd.DataFrame) -> pd.DataFrame:
         """Formats an ASICS DataFrame into the project's standardized schema.
-
-        Args:
-            df: The cleaned ASICS DataFrame.
-
-        Returns:
-            The formatted DataFrame.
         """
-        # Data is already correctly formatted by the cleaner
+        # If it's in Long format, pivot it to Wide
+        if 'Experiment' in df.columns and 'Metabolite' in df.columns:
+            logger.info("Pivoting ASICS Long format to Wide...")
+            df = df.pivot(
+                index='Metabolite', 
+                columns='Experiment', 
+                values='Concentration_uM_Final'
+            ).fillna(0.0)
+            df.index.name = "metabolite"
+            
         return df
