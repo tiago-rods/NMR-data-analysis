@@ -14,14 +14,16 @@ class GoldStandardCleaner(Cleaner):
     def clean(self, df: pd.DataFrame) -> pd.DataFrame:
         logger.info("Cleaning Gold Standard data...")
         
-        # 1. Identify where the spectra names start (ending in .cnx)
-        # Search in the first column for any string ending in .cnx
-        cnx_mask = df.iloc[:, 0].astype(str).str.contains(r'\.cnx$', na=False)
-        if not cnx_mask.any():
+        # 1. Identify where data rows start (first column contains filenames like '01RCF.cnx')
+        data_start_idx = -1
+        for i, val in enumerate(df.iloc[:, 0]):
+            if isinstance(val, str) and val.strip().endswith('.cnx'):
+                data_start_idx = i
+                break
+        
+        if data_start_idx == -1:
             logger.warning("No '.cnx' files found in the first column. Returning raw data.")
             return df
-            
-        data_start_idx = df[cnx_mask].index[0]
         
         # 2. Determine metabolite names
         # Usually, they are in the row directly above data or two rows above if HMDB IDs are present.
@@ -44,8 +46,8 @@ class GoldStandardCleaner(Cleaner):
         df_clean['Sample'] = (
             df_clean['Sample']
             .astype(str)
-            .str.replace(r'\.cnx$', '', regex=True)
             .str.strip()
+            .str.replace(r'\.cnx$', '', regex=True)
         )
         
         # 5. Clean concentration values
