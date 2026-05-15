@@ -21,6 +21,10 @@ def convert_wide_to_jsonb(df: pd.DataFrame) -> Dict[str, str]:
     json_results = {}
     
     for spectrum_name in df.columns:
+        col_str = str(spectrum_name)
+        if col_str.lower() in ("sample", "id", "metabolite") or col_str.startswith("Unnamed:"):
+            continue
+            
         # Extract series for this spectrum
         spectrum_series = df[spectrum_name]
         

@@ -14,6 +14,9 @@ DECLARE
     v_metabolite_name VARCHAR;
     v_concentration DOUBLE PRECISION;
 BEGIN
+    -- 0. Limpar o nome do espectro
+    p_espectro_name := public.clean_espectro_name_func(p_espectro_name);
+
     -- 1. Resolve Experiment ID
     SELECT id_experimento INTO v_fk_experimento 
     FROM public.experimento 

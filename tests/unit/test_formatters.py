@@ -192,3 +192,112 @@ class TestMagMetFormatter:
         formatter = MagMetFormatter()
         resultado = formatter.format(df_magmet_limpo)
         assert isinstance(resultado, pd.DataFrame)
+
+
+# ==============================================================================
+# NOVOS TESTES — ASICSFormatter com Formato Long (pivot)
+# ==============================================================================
+
+class TestASICSFormatterLongFormat:
+    """
+    Testa o pivotamento do formato Long para Wide no ASICSFormatter.
+    """
+
+    @pytest.fixture
+    def df_long_limpo(self) -> pd.DataFrame:
+        """DataFrame Long já limpo pelo ASICSCleaner (sem vírgulas, sem aspas)."""
+        return pd.DataFrame({
+            "Experiment": ["S1", "S1", "S2", "S2"],
+            "Metabolite": ["Alanine", "Glucose", "Alanine", "Glucose"],
+            "Concentration_uM_Final": [10.0, 20.0, 30.0, 0.0],
+        })
+
+    def test_pivot_gera_metabolitos_nas_linhas(self, df_long_limpo):
+        """Após o pivot, o índice deve ser 'metabolite' com os nomes corretos."""
+        formatter = ASICSFormatter()
+        resultado = formatter.format(df_long_limpo)
+
+        assert resultado.index.name == "metabolite"
+        assert "Alanine" in resultado.index
+        assert "Glucose" in resultado.index
+
+    def test_pivot_gera_amostras_nas_colunas(self, df_long_limpo):
+        """Após o pivot, as colunas devem ser os nomes dos experimentos."""
+        formatter = ASICSFormatter()
+        resultado = formatter.format(df_long_limpo)
+
+        assert "S1" in resultado.columns
+        assert "S2" in resultado.columns
+
+    def test_pivot_valores_corretos(self, df_long_limpo):
+        """Os valores devem estar nas posições corretas após o pivotamento."""
+        formatter = ASICSFormatter()
+        resultado = formatter.format(df_long_limpo)
+
+        assert resultado.loc["Alanine", "S1"] == pytest.approx(10.0)
+        assert resultado.loc["Glucose", "S2"] == pytest.approx(0.0)
+        assert resultado.loc["Alanine", "S2"] == pytest.approx(30.0)
+
+    def test_pivot_nao_gera_nan(self, df_long_limpo):
+        """Valores faltantes após o pivot devem ser 0.0, não NaN."""
+        formatter = ASICSFormatter()
+        resultado = formatter.format(df_long_limpo)
+        assert not resultado.isnull().any().any()
+
+
+# ==============================================================================
+# NOVOS TESTES — GoldStandardFormatter (Sprint 4)
+# ==============================================================================
+
+from src.formatter.gold_standard_formatter import GoldStandardFormatter
+
+
+class TestGoldStandardFormatter:
+    """
+    Testa o GoldStandardFormatter, que transpõe o DataFrame do
+    Padrão Ouro (amostras nas linhas → amostras nas colunas).
+    """
+
+    @pytest.fixture
+    def df_gs_limpo(self) -> pd.DataFrame:
+        """DataFrame Gold Standard já limpo (amostras nas linhas)."""
+        return pd.DataFrame({
+            "Sample": ["01RCF_ex1_p1", "02RCF_ex1_p1"],
+            "Alanine": [50.0, 60.0],
+            "Glucose": [120.0, 110.0],
+        })
+
+    def test_transposicao_gera_metabolitos_nas_linhas(self, df_gs_limpo):
+        """Após a transposição, o índice deve ser 'metabolite'."""
+        formatter = GoldStandardFormatter()
+        resultado = formatter.format(df_gs_limpo)
+
+        assert resultado.index.name == "metabolite"
+        assert "Alanine" in resultado.index
+        assert "Glucose" in resultado.index
+
+    def test_transposicao_gera_amostras_nas_colunas(self, df_gs_limpo):
+        """Após a transposição, as colunas devem ser os nomes das amostras."""
+        formatter = GoldStandardFormatter()
+        resultado = formatter.format(df_gs_limpo)
+
+        assert "01RCF_ex1_p1" in resultado.columns
+        assert "02RCF_ex1_p1" in resultado.columns
+
+    def test_valores_corretos_apos_transposicao(self, df_gs_limpo):
+        """A concentração de Alanine na amostra '01RCF_ex1_p1' deve ser 50.0."""
+        formatter = GoldStandardFormatter()
+        resultado = formatter.format(df_gs_limpo)
+
+        assert resultado.loc["Alanine", "01RCF_ex1_p1"] == pytest.approx(50.0)
+        assert resultado.loc["Glucose", "02RCF_ex1_p1"] == pytest.approx(110.0)
+
+    def test_sem_coluna_sample_retorna_df_original(self):
+        """Se 'Sample' não existir, o formatter não deve quebrar."""
+        df_sem_sample = pd.DataFrame({"A": [1.0], "B": [2.0]})
+        formatter = GoldStandardFormatter()
+        resultado = formatter.format(df_sem_sample)
+
+        # Sem 'Sample', retorna o DataFrame original
+        assert resultado is not None
+        assert isinstance(resultado, pd.DataFrame)

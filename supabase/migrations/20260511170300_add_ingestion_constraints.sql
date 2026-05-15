@@ -19,3 +19,7 @@ ADD CONSTRAINT experimento_espectro_key UNIQUE (espectro);
 -- 5. Instrumentos: Frequency and Fabricant combination should be unique
 ALTER TABLE public.instrumentos 
 ADD CONSTRAINT instrumentos_frequencia_fabricante_key UNIQUE (frequencia, fabricante);
+
+-- 6. Ferramenta: Name, Version and Technology combination should be unique
+ALTER TABLE public.ferramenta 
+ADD CONSTRAINT ferramenta_nome_versao_tecnologia_key UNIQUE (nome, versao, tecnologia);

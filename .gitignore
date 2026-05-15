@@ -45,3 +45,5 @@ node_modules/
 # General patterns for caches
 **/__pycache__/
 **/.pytest_cache/
+
+**/__init__.py

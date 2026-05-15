@@ -20,6 +20,9 @@ DECLARE
     v_concentration DOUBLE PRECISION;
     v_count INTEGER := 0;
 BEGIN
+    -- 0. Limpar o nome do espectro (removendo _ex1_p1 e afins)
+    p_espectro_name := public.clean_espectro_name_func(p_espectro_name);
+
     -- 1. Resolve Experiment ID from spectrum name
     SELECT id_experimento INTO v_fk_experimento 
     FROM public.experimento 
