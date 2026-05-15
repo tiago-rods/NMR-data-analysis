@@ -2,6 +2,7 @@ import os
 import zipfile
 import urllib.request
 import xml.etree.ElementTree as ET
+import shutil
 
 from database.seeders.factory_seeder import FactorySeeder
 
@@ -35,7 +36,9 @@ class HMDBSeeder(FactorySeeder):
 
         if not os.path.exists(LOCAL_XML):
             print(f"Fazendo download do HMDB em {HMDB_URL} (pode demorar)...")
-            urllib.request.urlretrieve(HMDB_URL, LOCAL_ZIP)
+            req = urllib.request.Request(HMDB_URL, headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(req) as response, open(LOCAL_ZIP, 'wb') as out_file:
+                shutil.copyfileobj(response, out_file)
             print("Extraindo XML...")
             with zipfile.ZipFile(LOCAL_ZIP, "r") as zip_ref:
                 zip_ref.extractall(DATA_DIR)

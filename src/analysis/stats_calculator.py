@@ -90,7 +90,7 @@ class StatsCalculator:
         tool_name: Optional[str] = None,
     ) -> list[PairedObservation]:
         """
-        Busca todos os pares (concentração da ferramenta × Gold Standard)
+        Busca todos os pares (concentração da ferramenta x Gold Standard)
         via INNER JOIN. Apenas metabolitos presentes em ambas as fontes são
         retornados — isso é intencional e correto para o cálculo estatístico.
 

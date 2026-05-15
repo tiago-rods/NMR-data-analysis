@@ -48,7 +48,8 @@ class ExperimentSeeder(FactorySeeder):
     ) -> None:
         """Registra todos os nomes de espectro como experimentos no banco."""
         for col in columns:
-            if col in ("metabolite", "Sample"):
+            col_str = str(col)
+            if col_str.lower() in ("metabolite", "sample", "id") or col_str.startswith("Unnamed:"):
                 continue
 
             data = {
