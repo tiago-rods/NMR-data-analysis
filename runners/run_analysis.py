@@ -88,10 +88,13 @@ def run(tool_name: Optional[str] = None) -> None:
     # ── 2. Calculate (Strategy) ─────────────────────────────────────────────
     logger.info("=== ETAPA 2/3: Calculando métricas ===")
     engine = StatsEngine()
-    results = engine.calculate_all(observations)
+    counts = calculator.fetch_all_experiment_counts()
+    results = engine.calculate_all(observations, counts)
     logger.info(
-        "%d StatResults gerados (3 níveis: por espectro, por biofluido, total).",
-        len(results),
+        "Métricas calculadas com sucesso (%d espectros, %d metabólitos, %d ferramentas).",
+        len(results[0]),
+        len(results[1]),
+        len(results[2]),
     )
 
     # ── 3. Persist (AnalysisSeeder) ─────────────────────────────────────────

@@ -62,6 +62,19 @@ _TOOL_METABOLITE_COUNT_QUERY = """
       AND p.fk_experimento = %s;
 """
 
+_ALL_GS_COUNT_QUERY = """
+    SELECT fk_experimento AS experiment_id, COUNT(*) AS total
+    FROM gold_std
+    GROUP BY fk_experimento;
+"""
+
+_ALL_TOOL_COUNT_QUERY = """
+    SELECT p.fk_experimento AS experiment_id, p.fk_ferramenta AS tool_id, COUNT(r.fk_metabolito) AS total
+    FROM resultado r
+    JOIN processamento p ON r.fk_processamento = p.id_processamento
+    GROUP BY p.fk_experimento, p.fk_ferramenta;
+"""
+
 
 # ── Repository ────────────────────────────────────────────────────────────────
 
@@ -174,4 +187,36 @@ class StatsCalculator:
                 experiment_id,
                 exc,
             )
+            raise
+
+    def fetch_all_experiment_counts(self) -> dict[int, dict]:
+        """
+        Busca em lote todos os totais de metabolitos por experimento (GS e Tools).
+        Evita o problema N+1 ao fazer queries individuais.
+        
+        Returns:
+            Dict formatado: { experiment_id: { 'gs_total': int, 'tools': { tool_id: int } } }
+        """
+        counts = {}
+        try:
+            with self._conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                # 1. GS Counts
+                cur.execute(_ALL_GS_COUNT_QUERY)
+                for row in cur.fetchall():
+                    exp_id = row['experiment_id']
+                    counts[exp_id] = {'gs_total': row['total'], 'tools': {}}
+                
+                # 2. Tool Counts
+                cur.execute(_ALL_TOOL_COUNT_QUERY)
+                for row in cur.fetchall():
+                    exp_id = row['experiment_id']
+                    tool_id = row['tool_id']
+                    if exp_id not in counts:
+                        counts[exp_id] = {'gs_total': 0, 'tools': {}}
+                    counts[exp_id]['tools'][tool_id] = row['total']
+            
+            logger.info("fetch_all_experiment_counts: %d experimentos carregados.", len(counts))
+            return counts
+        except Exception as exc:
+            logger.error("Erro ao buscar contagens de experimentos em lote: %s", exc)
             raise

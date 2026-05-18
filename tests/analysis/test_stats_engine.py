@@ -23,7 +23,12 @@ import math
 import numpy as np
 import pytest
 
-from src.analysis.models import PairedObservation, StatResult
+from src.analysis.models import (
+    PairedObservation,
+    StatResultEspectro,
+    StatResultMetabolito,
+    StatResultFerramenta,
+)
 from src.analysis.stats_engine import (
     BiasStrategy,
     MAPEStrategy,
@@ -240,39 +245,49 @@ class TestStatsEngineCalculateAll:
     """Testa a orquestração dos 3 níveis de granularidade."""
 
     def test_retorna_lista_de_stat_results(self, engine, identical_obs):
-        results = engine.calculate_all(identical_obs)
-        assert isinstance(results, list)
-        assert all(isinstance(r, StatResult) for r in results)
+        counts = {10: {'gs_total': 5, 'tools': {1: 5}}}
+        results = engine.calculate_all(identical_obs, counts)
+        assert isinstance(results, tuple)
+        assert len(results) == 3
+        assert all(isinstance(r, StatResultEspectro) for r in results[0])
+        assert all(isinstance(r, StatResultMetabolito) for r in results[1])
+        assert all(isinstance(r, StatResultFerramenta) for r in results[2])
 
     def test_lista_vazia_retorna_lista_vazia(self, engine):
-        results = engine.calculate_all([])
-        assert results == []
+        results = engine.calculate_all([], {})
+        assert results == ([], [], [])
 
     def test_nivel_1_tem_experiment_id(self, engine, identical_obs):
         """Resultados de nível 1 devem ter experiment_id preenchido."""
-        results = engine.calculate_all(identical_obs)
-        nivel_1 = [r for r in results if r.experiment_id is not None and r.biofluid is not None]
+        counts = {10: {'gs_total': 5, 'tools': {1: 5}}}
+        results = engine.calculate_all(identical_obs, counts)
+        nivel_1 = results[0]
         assert len(nivel_1) > 0
+        assert all(r.experiment_id is not None for r in nivel_1)
 
     def test_nivel_3_tem_experiment_e_biofluid_none(self, engine, identical_obs):
-        """Resultados de nível 3 devem ter experiment_id=None e biofluid=None."""
-        results = engine.calculate_all(identical_obs)
-        nivel_3 = [r for r in results if r.experiment_id is None and r.biofluid is None]
+        """Resultados de nível 3 avaliam de forma global por ferramenta."""
+        counts = {10: {'gs_total': 5, 'tools': {1: 5}}}
+        results = engine.calculate_all(identical_obs, counts)
+        nivel_3 = results[2]
         assert len(nivel_3) > 0
 
     def test_multi_tool_gera_resultados_separados(self, engine, multi_tool_obs):
         """Ferramentas diferentes devem gerar StatResults distintos."""
-        results = engine.calculate_all(multi_tool_obs)
-        tool_ids = {r.tool_test_id for r in results}
+        counts = {
+            10: {'gs_total': 2, 'tools': {1: 2, 2: 2}},
+            11: {'gs_total': 2, 'tools': {1: 2}}
+        }
+        results = engine.calculate_all(multi_tool_obs, counts)
+        tool_ids = {r.tool_test_id for r in results[0]}
         assert 1 in tool_ids
         assert 2 in tool_ids
 
     def test_correlacao_perfeita_nos_resultados(self, engine, identical_obs):
         """Com observações idênticas, Pearson deve ser 1.0 no nível 1."""
-        results = engine.calculate_all(identical_obs)
-        nivel_1 = [r for r in results if r.experiment_id is not None]
-        # Pode haver apenas 1 par por metabolito no nível 1, aí Pearson fica default
-        # Mas ao menos MSE deve ser 0.0
+        counts = {10: {'gs_total': 5, 'tools': {1: 5}}}
+        results = engine.calculate_all(identical_obs, counts)
+        nivel_1 = results[0]
         for r in nivel_1:
             assert math.isclose(r.mse, 0.0, abs_tol=1e-9)
             assert math.isclose(r.bias, 0.0, abs_tol=1e-9)

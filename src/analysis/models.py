@@ -38,53 +38,64 @@ class PairedObservation:
 
 
 @dataclass
-class StatResult:
+class StatResultEspectro:
     """
-    Resultado estatístico calculado para um conjunto de PairedObservations.
-
-    A granularidade é indicada pelos campos opcionais:
-      - experiment_id preenchido + biofluid preenchido → por espectro
-      - experiment_id=None + biofluid preenchido        → por ferramenta + biofluido
-      - experiment_id=None + biofluid=None              → por ferramenta (total)
-
-    Attributes:
-        tool_test_id:      id_ferramenta da ferramenta em avaliação
-        tool_ref_id:       id_ferramenta do Gold Standard
-        metabolite_id:     id_hmdb do metabolito analisado
-        experiment_id:     id_experimento; None para resultados agregados
-        biofluid:          biofluido; None para agregação total
-        pearson_r:         coeficiente de correlação de Pearson [-1, 1]
-        pearson_p:         p-valor da correlação de Pearson [0, 1]
-        spearman_r:        coeficiente de correlação de Spearman [-1, 1]
-        spearman_p:        p-valor da correlação de Spearman [0, 1]
-        bias:              viés médio (mean(tool - gs))
-        mse:               erro quadrático médio (≥ 0)
-        mape:              erro percentual absoluto médio (≥ 0)
-        coverage_pct:      % de metabolitos do GS identificados pela ferramenta [0, 100]
-        identified_gs_pct: % de metabolitos identificados em relação ao GS [0, 100]
-        n_observations:    número de pares usados no cálculo
+    Resultado estatístico no nível do Espectro (Experimento).
+    Compara a performance da ferramenta em um único espectro contra a referência.
     """
-
     tool_test_id: int
     tool_ref_id: int
-    metabolite_id: str
-    experiment_id: Optional[int] = None
-    biofluid: Optional[str] = None
-
-    # Métricas de correlação
+    experiment_id: int
+    biofluid: str
+    gs_total_metabolitos: int = 0
+    tool_total_metabolitos: int = 0
+    match_count: int = 0
+    coverage_pct: float = 0.0
+    identified_gs_pct: float = 0.0
     pearson_r: float = 0.0
     pearson_p: float = 0.0
     spearman_r: float = 0.0
     spearman_p: float = 0.0
-
-    # Métricas de erro
     bias: float = 0.0
     mse: float = 0.0
     mape: float = 0.0
 
-    # Métricas de cobertura (para dados_metabolitos)
-    coverage_pct: float = 0.0
-    identified_gs_pct: float = 0.0
 
-    # Diagnóstico
+@dataclass
+class StatResultMetabolito:
+    """
+    Resultado estatístico no nível do Metabólito.
+    Avalia a precisão de quantificação de um metabólito específico agrupado por todos os espectros.
+    """
+    tool_test_id: int
+    tool_ref_id: int
+    metabolite_id: str
     n_observations: int = 0
+    pearson_r: float = 0.0
+    pearson_p: float = 0.0
+    spearman_r: float = 0.0
+    spearman_p: float = 0.0
+    bias: float = 0.0
+    mse: float = 0.0
+    mape: float = 0.0
+
+
+@dataclass
+class StatResultFerramenta:
+    """
+    Resultado estatístico no nível global da Ferramenta.
+    Avalia a performance consolidada da ferramenta em todos os espectros e metabólitos.
+    """
+    tool_test_id: int
+    tool_ref_id: int
+    n_observations: int = 0
+    coverage_mean_pct: float = 0.0
+    identified_gs_mean_pct: float = 0.0
+    pearson_r: float = 0.0
+    pearson_p: float = 0.0
+    spearman_r: float = 0.0
+    spearman_p: float = 0.0
+    bias: float = 0.0
+    mse: float = 0.0
+    mape: float = 0.0
+
