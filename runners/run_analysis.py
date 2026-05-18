@@ -13,9 +13,14 @@ Uso:
     python runners/run_analysis.py --tool nmRanalysis --log-level DEBUG
 """
 
+import sys
 import argparse
 import logging
+from pathlib import Path
 from typing import Optional
+
+# Adiciona o diretório raiz do projeto ao sys.path para importações absolutas funcionarem
+sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from database.db_manager import DataBaseManager
 from database.seeders.analysis_seeder import AnalysisSeeder

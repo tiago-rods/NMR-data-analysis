@@ -1,10 +1,11 @@
 -- Procedure to ingest Gold Standard results for a single spectrum
 -- Expects a JSONB array of objects: [{"metabolite": "...", "concentration": 0.0}, ...]
 
-CREATE OR REPLACE PROCEDURE public.ingest_gold_standard(
+CREATE OR REPLACE FUNCTION public.ingest_gold_standard(
     p_espectro_name VARCHAR,
     p_json_data JSONB
 )
+RETURNS void
 LANGUAGE plpgsql
 AS $$
 DECLARE

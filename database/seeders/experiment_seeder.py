@@ -1,3 +1,4 @@
+import json
 import pandas as pd
 from pathlib import Path
 
@@ -115,8 +116,21 @@ class ExperimentSeeder(FactorySeeder):
             )
             if version_res.data:
                 tool_version = version_res.data[0]["versao"]
-        except Exception:
-            print(f"  Aviso: versão não encontrada para {meta.ferramenta}, usando {tool_version}.")
+            else:
+                # Se não existir, registra automaticamente a ferramenta com v1.0.0 e tecnologia extraída dos metadados
+                self.supabase.table("ferramenta").upsert(
+                    {
+                        "nome": meta.ferramenta,
+                        "versao": "v1.0.0",
+                        "tecnologia": meta.tecnologia,
+                        "tempo_medio_processamento": 0.0
+                    },
+                    on_conflict="nome,versao,tecnologia"
+                ).execute()
+                print(f"  Ferramenta '{meta.ferramenta}' ({meta.tecnologia}) registrada automaticamente.")
+                tool_version = "v1.0.0"
+        except Exception as e:
+            print(f"  Aviso ao buscar/registrar ferramenta {meta.ferramenta}: {e}. Usando {tool_version}.")
 
         json_data = convert_wide_to_jsonb(df)
 
@@ -129,7 +143,7 @@ class ExperimentSeeder(FactorySeeder):
                         "p_tool_name": meta.ferramenta,
                         "p_tool_version": tool_version,
                         "p_tool_tech": meta.tecnologia,
-                        "p_json_data": json_str,
+                        "p_json_data": json.loads(json_str),
                     },
                 ).execute()
             except Exception as e:
@@ -144,7 +158,7 @@ class ExperimentSeeder(FactorySeeder):
             try:
                 self.supabase.rpc(
                     "ingest_gold_standard",
-                    {"p_espectro_name": spectrum, "p_json_data": json_str},
+                    {"p_espectro_name": spectrum, "p_json_data": json.loads(json_str)},
                 ).execute()
             except Exception as e:
                 print(f"  Erro ao ingerir GS espectro {spectrum}: {e}")
