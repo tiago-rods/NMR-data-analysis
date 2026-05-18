@@ -17,6 +17,7 @@ from pathlib import Path
 # Adiciona o diretório raiz do projeto ao sys.path para importações absolutas funcionarem
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
+from database.seeders.tools_seeder import ToolsSeeder
 from database.seeders.experiment_seeder import ExperimentSeeder
 
 logging.basicConfig(
@@ -41,6 +42,10 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+
+    logger.info("Iniciando semeadura de ferramentas manuais...")
+    tools_seeder = ToolsSeeder()
+    tools_seeder.run()
 
     logger.info("Iniciando ingestão em: %s", args.dir)
     seeder = ExperimentSeeder()

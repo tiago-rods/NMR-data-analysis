@@ -105,9 +105,12 @@ class AnalysisSeeder(FactorySeeder):
         """
         Upsert em metricas.
         FK → analise_comparativa (apenas para resultados com experiment_id).
-        Resultados agregados (experiment_id=None) são inseridos sem FK.
+        Apenas resultados com experiment_id não-nulo são inseridos para respeitar
+        a restrição NOT NULL de fk_experimento no banco de dados.
         """
-        if not results:
+        # Filtra resultados agregados (experiment_id=None) que violariam a constraint
+        valid_results = [r for r in results if r.experiment_id is not None]
+        if not valid_results:
             return
 
         records = [
@@ -124,11 +127,12 @@ class AnalysisSeeder(FactorySeeder):
                 "mse":                      r.mse,
                 "mape":                     r.mape,
             }
-            for r in results
+            for r in valid_results
         ]
 
         # Inserção em lotes para não sobrecarregar a API
         batch_size = 500
+
         for i in range(0, len(records), batch_size):
             batch = records[i : i + batch_size]
             try:
