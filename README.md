@@ -34,7 +34,7 @@ flowchart TD
     end
 
     subgraph Banco de Dados PostgreSQL
-        G -->|run_ingestion.py| H[(Tabela: experiment_data)]
+        G -->|run_ingestion.py| H[(Tabela: Experimento)]
     end
 ```
 
@@ -49,7 +49,7 @@ O fluxo analítico (Sprint 3) recupera os dados persistidos, cruza-os com o *Gol
 
 ```mermaid
 flowchart TD
-    A[(Tabela: experiment_data)] -->|Fetch Pairs| B(StatsCalculator\nLoader)
+    A[(Tabela:Experimento)] -->|Fetch Pairs| B(StatsCalculator\nLoader)
     B -->|Tool vs Gold Standard| C(StatsEngine\nCalculator)
 
     subgraph Calculation [Métricas Estatísticas]

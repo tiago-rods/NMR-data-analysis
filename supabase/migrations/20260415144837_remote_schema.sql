@@ -344,7 +344,6 @@ ALTER SEQUENCE "public"."schema_migrations_id_seq" OWNED BY "public"."schema_mig
 CREATE TABLE IF NOT EXISTS "public"."sinonimo_metabolito" (
     "id_sinonimo" integer NOT NULL,
     "fk_metabolito" character(11) NOT NULL,
-    "tipo_variacao" character varying(16),
     "nome_alternativo" character varying(100) NOT NULL
 );
 

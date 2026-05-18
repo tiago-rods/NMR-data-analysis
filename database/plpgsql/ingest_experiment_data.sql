@@ -1,13 +1,14 @@
 -- Procedure to ingest results for a single spectrum (experimento) and tool (ferramenta)
 -- Expects a JSONB array of objects: [{"metabolite": "...", "concentration": 0.0}, ...]
 
-CREATE OR REPLACE PROCEDURE public.ingest_experiment_results(
+CREATE OR REPLACE FUNCTION public.ingest_experiment_results(
     p_espectro_name VARCHAR,
     p_tool_name VARCHAR,
     p_tool_version VARCHAR,
     p_tool_tech VARCHAR,
     p_json_data JSONB
 )
+RETURNS void
 LANGUAGE plpgsql
 AS $$
 DECLARE

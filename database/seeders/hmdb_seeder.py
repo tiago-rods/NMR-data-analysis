@@ -3,7 +3,10 @@ import zipfile
 import urllib.request
 import xml.etree.ElementTree as ET
 import shutil
+import sys
+from pathlib import Path
 
+sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 from database.seeders.factory_seeder import FactorySeeder
 
 # Configurações
@@ -71,7 +74,6 @@ class HMDBSeeder(FactorySeeder):
                                 {
                                     "fk_metabolito": hmdb_id,
                                     "nome_alternativo": syn.text,
-                                    "tipo_variacao": "synonym",
                                 }
                                 for syn in synonyms_node.findall("hmdb:synonym", ns)
                             ]

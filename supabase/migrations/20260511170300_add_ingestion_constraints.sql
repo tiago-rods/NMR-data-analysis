@@ -21,5 +21,6 @@ ALTER TABLE public.instrumentos
 ADD CONSTRAINT instrumentos_frequencia_fabricante_key UNIQUE (frequencia, fabricante);
 
 -- 6. Ferramenta: Name, Version and Technology combination should be unique
+ALTER TABLE public.ferramenta DROP CONSTRAINT IF EXISTS ferramenta_nome_versao_tecnologia_key;
 ALTER TABLE public.ferramenta 
 ADD CONSTRAINT ferramenta_nome_versao_tecnologia_key UNIQUE (nome, versao, tecnologia);

@@ -9,9 +9,13 @@ Uso:
     python runners/run_ingestion.py --dir data/processed/formatted/Complete
 """
 
+import sys
 import argparse
 import logging
 from pathlib import Path
+
+# Adiciona o diretório raiz do projeto ao sys.path para importações absolutas funcionarem
+sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from database.seeders.experiment_seeder import ExperimentSeeder
 

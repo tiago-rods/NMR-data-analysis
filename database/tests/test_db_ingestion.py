@@ -104,7 +104,7 @@ def test_full_ingestion_cycle():
         ])
         # Nota: Usamos CAST explícito para evitar erro de 'unknown' types no CALL
         cur.execute("""
-            CALL public.ingest_experiment_results(
+            SELECT public.ingest_experiment_results(
                 %s::VARCHAR, %s::VARCHAR, %s::VARCHAR, %s::VARCHAR, %s::JSONB
             );
         """, ('TEST_SPEC', 'TEST_TOOL', '1.0.0', 'csv', test_json))
@@ -116,7 +116,7 @@ def test_full_ingestion_cycle():
             {"metabolite": "Alanine", "concentration": 99.9}
         ])
         cur.execute("""
-            CALL public.ingest_experiment_results(
+            SELECT public.ingest_experiment_results(
                 %s::VARCHAR, %s::VARCHAR, %s::VARCHAR, %s::VARCHAR, %s::JSONB
             );
         """, ('TEST_SPEC', 'TEST_TOOL', '1.0.0', 'csv', updated_json))
