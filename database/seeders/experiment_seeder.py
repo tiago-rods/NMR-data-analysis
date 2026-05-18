@@ -103,7 +103,6 @@ class ExperimentSeeder(FactorySeeder):
         self.seed_experiments_from_columns(df.columns, inst_id, meta.biofluido)
 
         # Resolve versão da ferramenta
-        tool_version = "v1.0.0"
         try:
             version_res = (
                 self.supabase.table("ferramenta")
@@ -116,21 +115,17 @@ class ExperimentSeeder(FactorySeeder):
             )
             if version_res.data:
                 tool_version = version_res.data[0]["versao"]
+                print(f"  Ferramenta '{meta.ferramenta}' ({meta.tecnologia}) resolvida com sucesso para a versão '{tool_version}'.")
             else:
-                # Se não existir, registra automaticamente a ferramenta com v1.0.0 e tecnologia extraída dos metadados
-                self.supabase.table("ferramenta").upsert(
-                    {
-                        "nome": meta.ferramenta,
-                        "versao": "v1.0.0",
-                        "tecnologia": meta.tecnologia,
-                        "tempo_medio_processamento": 0.0
-                    },
-                    on_conflict="nome,versao,tecnologia"
-                ).execute()
-                print(f"  Ferramenta '{meta.ferramenta}' ({meta.tecnologia}) registrada automaticamente.")
-                tool_version = "v1.0.0"
+                raise ValueError(
+                    f"A ferramenta '{meta.ferramenta}' com tecnologia '{meta.tecnologia}' não foi encontrada "
+                    f"na tabela public.ferramenta. Por favor, registre-a manualmente no arquivo "
+                    f"'data/Metadata/metadata_tools.csv' e rode o ToolsSeeder antes de prosseguir com a ingestão."
+                )
         except Exception as e:
-            print(f"  Aviso ao buscar/registrar ferramenta {meta.ferramenta}: {e}. Usando {tool_version}.")
+            print(f"  Erro crítico ao validar ferramenta '{meta.ferramenta}' ({meta.tecnologia}): {e}")
+            raise
+
 
         json_data = convert_wide_to_jsonb(df)
 

@@ -25,7 +25,12 @@ from typing import Optional
 import numpy as np
 import scipy.stats
 
-from src.analysis.models import PairedObservation, StatResult
+from src.analysis.models import (
+    PairedObservation,
+    StatResultEspectro,
+    StatResultMetabolito,
+    StatResultFerramenta,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -103,22 +108,13 @@ class MAPEStrategy(MetricStrategy):
 
 class StatsEngine:
     """
-    Orquestra o cálculo de métricas nos 3 níveis de granularidade:
+    Orquestra o cálculo de métricas nos 3 níveis de granularidade da 3FN:
+    
+    1. `analise_espectro`: Agrupa por (ferramenta, espectro) e avalia todo o perfil metabólico.
+    2. `analise_metabolito`: Agrupa por (ferramenta, metabolito) e avalia um metabólito em todos os espectros.
+    3. `analise_ferramenta`: Agrupa por (ferramenta) e avalia globalmente.
 
-    Nível 1 — Por espectro:
-        experiment_id preenchido, biofluid preenchido.
-        → Alimenta analise_comparativa + metricas.
-
-    Nível 2 — Por ferramenta + biofluido:
-        experiment_id=None, biofluid preenchido.
-        → Alimenta metricas (agregado por biofluido).
-
-    Nível 3 — Por ferramenta (total):
-        experiment_id=None, biofluid=None.
-        → Alimenta metricas (agregado geral).
-
-    Design Pattern: Strategy — as métricas são injetadas no construtor,
-    permitindo substituir ou adicionar métricas sem alterar o Engine.
+    Design Pattern: Strategy.
     """
 
     def __init__(self, strategies: list[MetricStrategy] | None = None):
@@ -133,79 +129,82 @@ class StatsEngine:
     # ── API pública ────────────────────────────────────────────────────────────
 
     def calculate_all(
-        self, observations: list[PairedObservation]
-    ) -> list[StatResult]:
+        self,
+        observations: list[PairedObservation],
+        experiment_counts: dict[int, dict]
+    ) -> tuple[list[StatResultEspectro], list[StatResultMetabolito], list[StatResultFerramenta]]:
         """
-        Calcula métricas nos 3 níveis e retorna a lista completa de StatResults.
+        Calcula métricas nos 3 níveis e retorna as listas completas.
+        `experiment_counts` deve ser:
+        { exp_id: { 'gs_total': int, 'tools': { tool_id: int } } }
         """
-        results: list[StatResult] = []
-        results.extend(self._by_experiment(observations))        # nível 1
-        results.extend(self._by_tool_and_biofluid(observations)) # nível 2
-        results.extend(self._by_tool(observations))              # nível 3
+        espectros = self._by_experiment(observations, experiment_counts)
+        metabolitos = self._by_metabolite(observations)
+        ferramentas = self._by_tool(observations, espectros)
 
         logger.info(
-            "calculate_all: %d StatResults gerados (%d obs de entrada).",
-            len(results),
-            len(observations),
+            "calculate_all: %d Espectro, %d Metabolito, %d Ferramenta gerados.",
+            len(espectros), len(metabolitos), len(ferramentas)
         )
-        return results
+        return espectros, metabolitos, ferramentas
 
     # ── Nível 1: por espectro ──────────────────────────────────────────────────
 
     def _by_experiment(
-        self, observations: list[PairedObservation]
-    ) -> list[StatResult]:
-        """Agrupa por (tool_test_id, tool_ref_id, experiment_id, metabolite_id)."""
+        self, observations: list[PairedObservation], counts: dict[int, dict]
+    ) -> list[StatResultEspectro]:
+        """Agrupa por (tool_test_id, tool_ref_id, experiment_id)."""
         results = []
-        key_fn = lambda o: (o.tool_test_id, o.tool_ref_id, o.experiment_id, o.metabolite_id)
+        key_fn = lambda o: (o.tool_test_id, o.tool_ref_id, o.experiment_id)
 
         for key, group in groupby(sorted(observations, key=key_fn), key=key_fn):
-            tool_test_id, tool_ref_id, experiment_id, metabolite_id = key
+            tool_test_id, tool_ref_id, experiment_id = key
             obs_list = list(group)
             biofluid = obs_list[0].biofluid
+            
+            exp_data = counts.get(experiment_id, {})
+            gs_total = exp_data.get('gs_total', 0)
+            tool_total = exp_data.get('tools', {}).get(tool_test_id, 0)
+            match_count = len(obs_list)
+            
+            cov_pct = self.calculate_coverage(match_count, gs_total)
+            id_gs_pct = self.calculate_identified_gs_pct(tool_total, gs_total)
 
-            result = self._compute_stat_result(
-                obs_list,
+            tool_arr = np.array([o.concentration_tool for o in obs_list], dtype=float)
+            gs_arr   = np.array([o.concentration_gs   for o in obs_list], dtype=float)
+
+            pearson_r,  pearson_p  = self._pearson.calculate(tool_arr, gs_arr)
+            spearman_r, spearman_p = self._spearman.calculate(tool_arr, gs_arr)
+            bias = BiasStrategy().calculate(tool_arr, gs_arr)
+            mse  = MSEStrategy().calculate(tool_arr, gs_arr)
+            mape = MAPEStrategy().calculate(tool_arr, gs_arr)
+
+            results.append(StatResultEspectro(
                 tool_test_id=tool_test_id,
                 tool_ref_id=tool_ref_id,
-                metabolite_id=metabolite_id,
                 experiment_id=experiment_id,
                 biofluid=biofluid,
-            )
-            results.append(result)
+                gs_total_metabolitos=gs_total,
+                tool_total_metabolitos=tool_total,
+                match_count=match_count,
+                coverage_pct=cov_pct,
+                identified_gs_pct=id_gs_pct,
+                pearson_r=pearson_r,
+                pearson_p=pearson_p,
+                spearman_r=spearman_r,
+                spearman_p=spearman_p,
+                bias=bias,
+                mse=mse,
+                mape=mape,
+            ))
 
         return results
 
-    # ── Nível 2: por ferramenta + biofluido ────────────────────────────────────
+    # ── Nível 2: por metabolito ────────────────────────────────────────────────
 
-    def _by_tool_and_biofluid(
+    def _by_metabolite(
         self, observations: list[PairedObservation]
-    ) -> list[StatResult]:
-        """Agrupa por (tool_test_id, tool_ref_id, biofluid, metabolite_id)."""
-        results = []
-        key_fn = lambda o: (o.tool_test_id, o.tool_ref_id, o.biofluid, o.metabolite_id)
-
-        for key, group in groupby(sorted(observations, key=key_fn), key=key_fn):
-            tool_test_id, tool_ref_id, biofluid, metabolite_id = key
-            obs_list = list(group)
-
-            result = self._compute_stat_result(
-                obs_list,
-                tool_test_id=tool_test_id,
-                tool_ref_id=tool_ref_id,
-                metabolite_id=metabolite_id,
-                experiment_id=None,   # agregado → sem espectro específico
-                biofluid=biofluid,
-            )
-            results.append(result)
-
-        return results
-
-    # ── Nível 3: por ferramenta (total) ───────────────────────────────────────
-
-    def _by_tool(
-        self, observations: list[PairedObservation]
-    ) -> list[StatResult]:
+    ) -> list[StatResultMetabolito]:
         """Agrupa por (tool_test_id, tool_ref_id, metabolite_id)."""
         results = []
         key_fn = lambda o: (o.tool_test_id, o.tool_ref_id, o.metabolite_id)
@@ -214,58 +213,75 @@ class StatsEngine:
             tool_test_id, tool_ref_id, metabolite_id = key
             obs_list = list(group)
 
-            result = self._compute_stat_result(
-                obs_list,
+            tool_arr = np.array([o.concentration_tool for o in obs_list], dtype=float)
+            gs_arr   = np.array([o.concentration_gs   for o in obs_list], dtype=float)
+
+            pearson_r,  pearson_p  = self._pearson.calculate(tool_arr, gs_arr)
+            spearman_r, spearman_p = self._spearman.calculate(tool_arr, gs_arr)
+            bias = BiasStrategy().calculate(tool_arr, gs_arr)
+            mse  = MSEStrategy().calculate(tool_arr, gs_arr)
+            mape = MAPEStrategy().calculate(tool_arr, gs_arr)
+
+            results.append(StatResultMetabolito(
                 tool_test_id=tool_test_id,
                 tool_ref_id=tool_ref_id,
                 metabolite_id=metabolite_id,
-                experiment_id=None,  # agregado total
-                biofluid=None,
-            )
-            results.append(result)
+                n_observations=len(obs_list),
+                pearson_r=pearson_r,
+                pearson_p=pearson_p,
+                spearman_r=spearman_r,
+                spearman_p=spearman_p,
+                bias=bias,
+                mse=mse,
+                mape=mape,
+            ))
 
         return results
 
-    # ── Núcleo de cálculo ──────────────────────────────────────────────────────
+    # ── Nível 3: por ferramenta (total) ───────────────────────────────────────
 
-    def _compute_stat_result(
+    def _by_tool(
         self,
-        obs: list[PairedObservation],
-        *,
-        tool_test_id: int,
-        tool_ref_id: int,
-        metabolite_id: str,
-        experiment_id: Optional[int],
-        biofluid: Optional[str],
-    ) -> StatResult:
-        """
-        Aplica todas as estratégias a um grupo de observações e retorna um StatResult.
-        """
-        tool_arr = np.array([o.concentration_tool for o in obs], dtype=float)
-        gs_arr   = np.array([o.concentration_gs   for o in obs], dtype=float)
+        observations: list[PairedObservation],
+        espectros: list[StatResultEspectro]
+    ) -> list[StatResultFerramenta]:
+        """Agrupa por (tool_test_id, tool_ref_id)."""
+        results = []
+        key_fn = lambda o: (o.tool_test_id, o.tool_ref_id)
 
-        pearson_r,  pearson_p  = self._pearson.calculate(tool_arr, gs_arr)
-        spearman_r, spearman_p = self._spearman.calculate(tool_arr, gs_arr)
+        for key, group in groupby(sorted(observations, key=key_fn), key=key_fn):
+            tool_test_id, tool_ref_id = key
+            obs_list = list(group)
+            
+            tool_arr = np.array([o.concentration_tool for o in obs_list], dtype=float)
+            gs_arr   = np.array([o.concentration_gs   for o in obs_list], dtype=float)
 
-        bias = BiasStrategy().calculate(tool_arr, gs_arr)
-        mse  = MSEStrategy().calculate(tool_arr, gs_arr)
-        mape = MAPEStrategy().calculate(tool_arr, gs_arr)
+            pearson_r,  pearson_p  = self._pearson.calculate(tool_arr, gs_arr)
+            spearman_r, spearman_p = self._spearman.calculate(tool_arr, gs_arr)
+            bias = BiasStrategy().calculate(tool_arr, gs_arr)
+            mse  = MSEStrategy().calculate(tool_arr, gs_arr)
+            mape = MAPEStrategy().calculate(tool_arr, gs_arr)
+            
+            tool_espectros = [e for e in espectros if e.tool_test_id == tool_test_id]
+            cov_mean = float(np.mean([e.coverage_pct for e in tool_espectros])) if tool_espectros else 0.0
+            id_gs_mean = float(np.mean([e.identified_gs_pct for e in tool_espectros])) if tool_espectros else 0.0
 
-        return StatResult(
-            tool_test_id=tool_test_id,
-            tool_ref_id=tool_ref_id,
-            metabolite_id=metabolite_id,
-            experiment_id=experiment_id,
-            biofluid=biofluid,
-            pearson_r=pearson_r,
-            pearson_p=pearson_p,
-            spearman_r=spearman_r,
-            spearman_p=spearman_p,
-            bias=bias,
-            mse=mse,
-            mape=mape,
-            n_observations=len(obs),
-        )
+            results.append(StatResultFerramenta(
+                tool_test_id=tool_test_id,
+                tool_ref_id=tool_ref_id,
+                n_observations=len(obs_list),
+                coverage_mean_pct=cov_mean,
+                identified_gs_mean_pct=id_gs_mean,
+                pearson_r=pearson_r,
+                pearson_p=pearson_p,
+                spearman_r=spearman_r,
+                spearman_p=spearman_p,
+                bias=bias,
+                mse=mse,
+                mape=mape,
+            ))
+
+        return results
 
     # ── Cobertura (calculada separadamente pois depende do total do GS) ────────
 
