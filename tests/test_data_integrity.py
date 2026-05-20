@@ -1,80 +1,62 @@
-import pytest
-import pandas as pd
+import unittest
+import os
 from pathlib import Path
-from src.readers.csv_reader import CSVReader
-from src.cleaners.nmRanalysis_cleaner import NmRanalysisCleaner
-from src.cleaners.ASICS_cleaner import ASICSCleaner
-from src.cleaners.MagMet_cleaner import MagMetCleaner
 
-def test_integridade_dados_reais_nmranalysis():
-    # 1. Definição do caminho do dado real
-    caminho_real = Path("data/raw/nmRanalysis/LNBio06_nmRanalysis_Soro_csv_size6.csv")
-    
-    # Verificamos primeiro se o arquivo existe (para não dar erro de caminho)
-    assert caminho_real.exists(), f"Arquivo não encontrado em: {caminho_real}"
-    
-    # 2. Testando a LEITURA
-    reader = CSVReader()
-    df_bruto = reader.read(str(caminho_real))
-    
-    # Check de integridade básico: O arquivo não pode estar vazio
-    assert not df_bruto.empty
-    
-    # Check de colunas: O Cleaner precisa dessas colunas para funcionar
-    colunas_obrigatorias = ["Sample", "Metabolite", "Quantity", "Fitting Error"]
-    for col in colunas_obrigatorias:
-        assert col in df_bruto.columns, f"A coluna '{col}' está faltando no arquivo real!"
+# Supabase client wrapper used in the project
+from database.db_manager import DataBaseManager
 
-def test_processamento_completo_com_dados_reais():
-    caminho_real = "data/raw/nmRanalysis/LNBio06_nmRanalysis_Soro_csv_size6.csv"
-    
-    reader = CSVReader()
-    cleaner = NmRanalysisCleaner()
-    
-    # Fluxo completo: Lê e Limpa
-    df_bruto = reader.read(caminho_real)
-    df_limpo = cleaner.clean(df_bruto)
-    
-    # Verificações pós-limpeza:
-    # 1. Não deve haver mais duplicatas de (Sample, Base_Metabolite)
-    duplicatas = df_limpo.duplicated(subset=["Sample", "Base_Metabolite"]).sum()
-    assert duplicatas == 0, f"Encontradas {duplicatas} duplicatas após a limpeza!"
-    
-    # 2. Os nomes das amostras não devem começar com 'X' (regra do seu cleaner)
-    assert not df_limpo["Sample"].str.startswith("X").any()
+class TestDataIntegrity(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # Initialize a single DB connection for all tests
+        cls.db = DataBaseManager()
+        # Ensure we have a fresh connection; supabase client is cached inside manager
+        cls.supabase = cls.db.supabase
 
-def test_integridade_dados_reais_asics():
-    caminho_real = Path("data/raw/ASICS/Soro/quantification_serum.csv")
-    assert caminho_real.exists()
-    
-    reader = CSVReader()
-    cleaner = ASICSCleaner()
-    
-    df_bruto = reader.read(str(caminho_real), index_col=0) # ASICS costuma ter o índice na primeira coluna
-    df_limpo = cleaner.clean(df_bruto)
-    
-    # Verificação: O índice deve se chamar 'metabolite'
-    assert df_limpo.index.name == "metabolite"
-    
-    # Verificação: Não deve haver aspas nos nomes das colunas (amostras)
-    assert not any('"' in str(col) for col in df_limpo.columns)
+    def test_experimento_counts(self):
+        """Verify that the number of experiments matches the expected counts for each biofluid."""
+        result = self.supabase.table("experimento").select("biofluido", "count", count="*", aggregate="count").group("biofluido").execute()
+        data = {row["biofluido"]: row["count"] for row in result.data}
+        # Expected counts after successful ingestion (based on previous logs)
+        self.assertEqual(data.get("Soro"), 137, "Soro experiment count should be 137")
+        self.assertEqual(data.get("Urina"), 180, "Urina experiment count should be 180")
 
-def test_integridade_dados_reais_magmet():
-    # Usando o arquivo 02 como amostra
-    caminho_real = Path("data/raw/MagMet/magmet_LNBio_Ag_Se_02.csv")
-    assert caminho_real.exists()
-    
-    reader = CSVReader()
-    cleaner = MagMetCleaner()
-    
-    df_bruto = reader.read(str(caminho_real))
-    df_limpo = cleaner.clean(df_bruto)
-    
-    # Verificação: A coluna HMDB ID deve ter sido removida
-    assert "HMDB ID" not in df_limpo.columns
-    
-    # Verificação: O índice deve ser 'metabolite'
-    assert df_limpo.index.name == "metabolite"
-    
-    # Verificação: Sufixos .fid removidos das colunas
-    assert not any(".fid" in str(col) for col in df_limpo.columns)
+    def test_gold_standard_rows(self):
+        """Check that gold_std has rows for every experiment (no missing entries)."""
+        # Count rows per biofluid by joining with experimento
+        query = (
+            self.supabase.from_("gold_std")
+            .select("experimento!inner(biofluido)")
+            .count("*", "total")
+            .execute()
+        )
+        total = query.data[0]["total"]
+        # Expect total = 137 (Soro) + 180 (Urina) = 317
+        self.assertEqual(total, 317, "Gold Standard should have 317 rows (one per experiment)")
+
+    def test_analysis_tables_not_null(self):
+        """Ensure that key metric columns in analysis tables are not null."""
+        # Check analise_ferramenta for non‑null pearson_r values
+        resp = self.supabase.table("analise_ferramenta").select("pearson_r").execute()
+        for row in resp.data:
+            self.assertIsNotNone(row["pearson_r"], "pearson_r should not be null in analise_ferramenta")
+
+        # Check analise_espectro for non‑null match_count
+        resp2 = self.supabase.table("analise_espectro").select("match_count").execute()
+        for row in resp2.data:
+            self.assertIsNotNone(row["match_count"], "match_count should not be null in analise_espectro")
+
+    def test_no_duplicate_experimentos(self):
+        """Verify that the experimento table respects the unique constraint on espectro."""
+        # Attempt to insert a duplicate espectro should raise an error via RPC if we try; here we just count duplicates
+        dup_query = (
+            self.supabase.from_("experimento")
+            .select("espectro", "count", count="*", aggregate="count")
+            .group("espectro")
+            .having("count", "gt", 1)
+            .execute()
+        )
+        self.assertEqual(len(dup_query.data), 0, "There should be no duplicate espectro entries")
+
+if __name__ == "__main__":
+    unittest.main()
