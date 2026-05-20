@@ -23,10 +23,12 @@ class ASICSCleaner(Cleaner):
             df['Metabolite'] = df['Metabolite'].astype(str).str.replace('"', '').str.strip()
             
             # Handle decimal commas if present
-            if df['Concentration_uM_Final'].dtype == object:
+            if not pd.api.types.is_numeric_dtype(df['Concentration_uM_Final']):
                 df['Concentration_uM_Final'] = (
                     df['Concentration_uM_Final']
+                    .astype(str)
                     .str.replace(',', '.')
+                    .str.strip()
                     .astype(float)
                 )
         else:
@@ -37,4 +39,3 @@ class ASICSCleaner(Cleaner):
             df.index.name = "metabolite"
 
         return df
-    
