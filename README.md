@@ -1,7 +1,9 @@
 # NMR-data-analysis
+## Overview
+This repository contains the pipeline for the standardization and statistical analysis of NMR ¹H metabolomics spectroscopy data. The data comes from different metabolomics profiling software such as ASICS, MagMet, nmrAnalysis. This project was developed as an undergraduate research in collaboration with LNBio and CNPEM.
 
 ## Visão geral
-Este repositório contém todo o fluxo de **processamento, padronização e análise estatística** de dados de espectroscopia de RMN \(¹H\) provenientes de diferentes ferramentas de profiling metabolômico (ASICS, MagMet e nmRanalysis). O projeto foi desenvolvido como parte de uma iniciação científica com o LNBio e está pronto para uso em novos conjuntos de dados.
+Este repositório contém todo o fluxo de **processamento, padronização e análise estatística** de dados de espectroscopia de RMN \(¹H\) provenientes de diferentes ferramentas de profiling metabolômico (ASICS, MagMet e nmRanalysis). O projeto foi desenvolvido como parte de uma iniciação científica com o LNBio e o CNPEM e está pronto para uso em novos conjuntos de dados.
 
 ---
 
