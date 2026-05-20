@@ -1,88 +1,153 @@
 # NMR-data-analysis
-**Projeto de Iniciação Científica** desenvolvido em conjunto com o LNBio.
-**Documento Final**: ainda não disponível
 
-**Objetivos:** 
-- Desenvolver um software que padroniza dados de espectros RMN ¹H para um formato csv, pronto para ser testado em diversas ferramentas.
-- Receber dados de perfilamento metabolômico de diferentes ferramentas, salvá-los em um banco de dados modelado rodando localmente em postgreSQL.
-- Comparar o desempenho de diferentes ferramentas de perfilamento metabolômico (ASICS, MagMet, nmRanalysis) e salvar os resultados em um banco de dados.
+## Visão geral
+Este repositório contém todo o fluxo de **processamento, padronização e análise estatística** de dados de espectroscopia de RMN \(¹H\) provenientes de diferentes ferramentas de profiling metabolômico (ASICS, MagMet e nmRanalysis). O projeto foi desenvolvido como parte de uma iniciação científica com o LNBio e está pronto para uso em novos conjuntos de dados.
 
-**Projeto ainda em andamento. Ao final será disponibilizada a publicação e dados mais detalhados neste README.**
+---
 
-Transformation of NMR ¹H to a standardized data type and statistical review of different automated profiling softwares.
+## Pipelines completos
 
-## Arquitetura do Projeto e Pipelines
-
-O projeto foi construído utilizando uma arquitetura modular focada no processamento de dados e em cálculos analíticos robustos. A separação de responsabilidades garante uma fácil adição de novas ferramentas e escalabilidade.
-
-### 1. Pipeline de Ingestão de Dados
-
-O fluxo de processamento de dados inicial (Sprint 1 e 2) é responsável por ler os outputs crus de diversas ferramentas, padronizá-los e armazená-los no banco de dados.
+### 1️⃣ Pipeline de **Padronização do Gold Standard**
+1. **Entrada** – Arquivo Excel bruto `data/raw/Gold_Standard/<biofluido>/concentrations.xlsx`.
+2. **`standardize_gold_standard.py`**
+   - Lê o Excel com `XLSXReader`.
+   - `GoldStandardCleaner` identifica a linha de início dos dados, extrai nomes de amostras e concentrações, remove sufixos `.cnx` e converte tudo para `float`.
+   - `GoldStandardFormatter` transpõe a tabela para que **linhas = metabólitos** e **colunas = amostras**.
+   - Salva o CSV padronizado em `data/processed/formatted/Complete/LNBioGS_<biofluido>.csv`.
+3. **Ingestão** – `experiment_seeder.py` lê o CSV e insere os valores na tabela `gold_std`.
 
 ```mermaid
 flowchart TD
-    subgraph Ferramentas Externas
-        A[ASICS] -->|Raw Data| D[Readers]
-        B[MagMet] -->|Raw Data| D
-        C[nmRanalysis] -->|Raw Data| D
-    end
+    A[Excel Gold Standard] -->|Lê| B[XLSXReader]
+    B --> C[GoldStandardCleaner]
+    C --> D[GoldStandardFormatter]
+    D --> E[CSV Padronizado]
+    E --> F[ExperimentSeeder]
+    F --> G[Tabela gold_std]
+``` 
 
-    subgraph Processamento Local
-        D -->|Parsed Data| E[Cleaners]
-        E -->|Clean Data| F[Formatters]
-        F -->|Standard CSV| G[Processors/Runners]
-    end
-
-    subgraph Banco de Dados PostgreSQL
-        G -->|run_ingestion.py| H[(Tabela: Experimento)]
-    end
-```
-
-- **Readers:** Responsáveis pela leitura dos arquivos brutos específicos de cada ferramenta.
-- **Cleaners:** Efetuam a limpeza dos dados, remoção de redundâncias e correção de cabeçalhos inconsistentes (ex: prefixos/sufixos indesejados).
-- **Formatters:** Padronizam os dados para o formato esperado pelo projeto (`csv` estruturado).
-- **Ingestion Runner (`run_ingestion.py`):** Utiliza o `ExperimentSeeder` para ingerir programaticamente os arquivos processados no Supabase (PostgreSQL), utilizando rotinas para evitar duplicidade.
-
-### 2. Pipeline de Análise Estatística
-
-O fluxo analítico (Sprint 3) recupera os dados persistidos, cruza-os com o *Gold Standard* (Padrão Ouro), e computa as métricas de desempenho.
+### 2️⃣ Pipeline de **Ingestão de Ferramentas**
+1. **Entrada** – Resultados brutos das ferramentas (CSV ou FID) em `data/raw/Tool/...`.
+2. **Leitura** – `src/readers` identifica o formato e carrega em `DataFrame`.
+3. **Limpeza** – Cada `cleaner` (ex.: `ASICS_cleaner`, `MagMet_cleaner`, `nmRanalysis_cleaner`) corrige cabeçalhos, remove linhas vazias e converte valores.
+4. **Formatação** – `src/formatter` garante um layout **linhas = amostras**, **colunas = metabólitos**.
+5. **Processamento** – `DataProcessor` (via `run_ingestion.py`) combina `reader → cleaner → formatter` e grava CSV temporário `formatted_<tool>.csv`.
+6. **Seed** – `experiment_seeder.py` lê o CSV formatado e populates:
+   - `experimento` (metadados de espectro)
+   - `resultado` (valores de cada ferramenta)
+   - `ferramenta` (referência da ferramenta)
 
 ```mermaid
 flowchart TD
-    A[(Tabela:Experimento)] -->|Fetch Pairs| B(StatsCalculator\nLoader)
-    B -->|Tool vs Gold Standard| C(StatsEngine\nCalculator)
-
-    subgraph Calculation [Métricas Estatísticas]
-        C -->|Pearson, Spearman| M1[Correlação]
-        C -->|Bias, MSE, MAPE| M2[Erro]
-        C -->|Identificação| M3[Cobertura]
+    subgraph RawTools[Resultados brutos]
+        T1[ASICS CSV]
+        T2[MagMet FID]
+        T3[nmRanalysis CSV]
     end
-
-    Calculation --> D(AnalysisSeeder\nPersist)
-    D --> E[(Tabelas Analíticas)]
+    subgraph ProcessamentoLocal
+        T1 --> R1[Reader]
+        T2 --> R2[Reader]
+        T3 --> R3[Reader]
+        R1 --> C1[Cleaner]
+        R2 --> C2[Cleaner]
+        R3 --> C3[Cleaner]
+        C1 --> F1[Formatter]
+        C2 --> F2[Formatter]
+        C3 --> F3[Formatter]
+        F1 --> P1[DataProcessor]
+        F2 --> P2[DataProcessor]
+        F3 --> P3[DataProcessor]
+    end
+    P1 -->|CSV| S[ExperimentSeeder]
+    P2 -->|CSV| S
+    P3 -->|CSV| S
+    S --> DB[(PostgreSQL / Supabase)]
 ```
 
-- **Loader (`StatsCalculator`):** Busca as observações pareadas de uma ferramenta alvo contra os dados do *Gold Standard* armazenados no banco de dados.
-- **Calculator (`StatsEngine`):** Processa os resultados em 3 níveis de granularidade (Por espectro, por biofluido e global) realizando o cálculo estatístico de variadas métricas.
-- **Persist (`AnalysisSeeder`):** Consolida e salva (via upsert) os resultados de volta para as tabelas analíticas no banco de dados.
-- **Analysis Runner (`run_analysis.py`):** Script orquestrador que executa o pipeline de forma automatizada.
+### 3️⃣ Pipeline de **Análise Estatística**
+1. **Carregamento** – `stats_calculator.py` consulta pares `(tool result, gold standard)` da base (`resultado` ↔ `gold_std`).
+2. **Cálculo** – `stats_engine.py` computa:
+   - Correlação de Pearson & Spearman (`pearson_r`, `pearson_p`, `spearman_r`, `spearman_p`)
+   - Erros (Bias, MSE, MAPE)
+   - Cobertura/Identificação (`identificados_gs_percent`, `cobertura_percent`)
+3. **Persistência** – `analysis_seeder.py` upserta resultados nas tabelas:
+   - `analise_espectro` (por experimento & ferramenta)
+   - `analise_metabolito` (por metabólito & ferramenta)
+   - `analise_ferramenta` (por combinação de ferramentas)
+4. **Orquestração** – `run_analysis.py` executa todo o fluxo.
 
-## O que foi feito até o momento
+```mermaid
+flowchart TD
+    DB[(PostgreSQL)] -->|Fetch pares| LC[StatsCalculator]
+    LC -->|Pairs| CE[StatsEngine]
+    CE -->|Métricas| AS[AnalysisSeeder]
+    AS -->|INSERT/UPSERT| DB
+```
 
-Até agora, o desenvolvimento focou em estruturar a base de dados e criar uma arquitetura robusta para o processamento de dados e análise estatística:
+### 4️⃣ **Fluxo completo do projeto**
+```mermaid
+flowchart LR
+    subgraph GoldStandard[Gold Standard]
+        GSraw[Excel Gold Standard]
+        GSproc[standardize_gold_standard.py]
+        GScsv[CSV Gold Standard]
+        GSseed[ExperimentSeeder]
+    end
+    subgraph Tools[Ferramentas]
+        ToolRaw[raw/Tool folders]
+        ToolProc[run_ingestion.py]
+        ToolCSV[formatted_*.csv]
+        ToolSeed[ExperimentSeeder]
+    end
+    subgraph DB[Supabase / PostgreSQL]
+        Experimento[(experimento)]
+        Resultado[(resultado)]
+        GoldStd[(gold_std)]
+        Analises[(analise_* tables)]
+    end
+    subgraph Stats[Análise Estatística]
+        StatsCalc[stats_calculator.py]
+        StatsEng[stats_engine.py]
+        AnalysisSeed[analysis_seeder.py]
+    end
+    GSraw --> GSproc --> GScsv --> GSseed --> GoldStd
+    ToolRaw --> ToolProc --> ToolCSV --> ToolSeed --> Resultado
+    ToolSeed --> Experimento
+    GoldStd --> Experimento
+    Experimento --> StatsCalc
+    Resultado --> StatsCalc
+    StatsCalc --> StatsEng --> AnalysisSeed --> Analises
+```
 
-- **Arquitetura Modular (Pipeline de Dados e Análise):**
-  - Implementação de um padrão de projeto dividindo as responsabilidades em etapas lógicas (Readers, Cleaners, Formatters, Runners e Calculators).
-  - Separação de lógicas específicas para as ferramentas (ASICS, MagMet e nmRanalysis).
+---
 
-- **Processamento e Padronização:**
-  - Criação de scripts em Python para ingestão programática e transformação (ex: conversores `csv_to_jsonb.py` e extração automática de metadados).
-  - Padronização no formato de dados consumíveis por pacotes R ou tabelas SQL.
+## Como executar o pipeline completo
+1. **Padronizar Gold Standard**
+   ```bash
+   python -m Scripts.standardize_gold_standard
+   ```
+2. **Ingerir resultados das ferramentas**
+   ```bash
+   python -m database.seeders.experiment_seeder
+   ```
+3. **Calcular e persistir métricas**
+   ```bash
+   python -m runners.run_analysis
+   ```
 
-- **Banco de Dados (Supabase / PostgreSQL):**
-  - Configuração de um banco de dados PostgreSQL com integração via Supabase.
-  - Implementação de constraints complexas, functions (como `ingest_experiment_data.sql`), views e rotinas de seeder (Seeders manuais, para factory e hmdb).
+> ** Observação:** As p‑valores `pearson_p` e `spearman_p` podem aparecer como `0.0` quando o número de observações é muito grande (ex.: >10 000). Nesse caso o valor está abaixo do limite de precisão (`≈4.9e‑324`) e o banco o grava como zero; estatisticamente isso indica **significância extrema (p < 10⁻³²⁴)**.
 
-- **Qualidade de Código e Testes:**
-  - Refatoração contínua e adoção de injeção de dependências.
-  - Criação de suítes de testes amplas (unitárias e de integração) validando banco de dados, limpeza de CSVs, consistência de JSONs e concorrência no processo de ingestão.
+---
+
+## Próximos passos
+- **Automatizar a atualização** dos Gold Standards para novos biofluidos.
+- **Adicionar suporte** a novos formatos de ferramentas (ex.: NMRPipe).
+- **Dashboard de visualização** (ex.: Streamlit) para inspeção dos resultados de métricas.
+
+---
+
+## Referências
+- **Documentação Supabase** – https://supabase.com/docs
+- **Cálculo de correlações** – https://en.wikipedia.org/wiki/Pearson_correlation_coefficient
+- **Metodologia de análise** – Descrição completa na publicação final em breve.
+
