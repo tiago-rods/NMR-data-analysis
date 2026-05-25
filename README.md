@@ -138,18 +138,3 @@ flowchart LR
    ```
 
 > ** Observação:** As p‑valores `pearson_p` e `spearman_p` podem aparecer como `0.0` quando o número de observações é muito grande (ex.: >10 000). Nesse caso o valor está abaixo do limite de precisão (`≈4.9e‑324`) e o banco o grava como zero; estatisticamente isso indica **significância extrema (p < 10⁻³²⁴)**.
-
----
-
-## Próximos passos
-- **Automatizar a atualização** dos Gold Standards para novos biofluidos.
-- **Adicionar suporte** a novos formatos de ferramentas (ex.: NMRPipe).
-- **Dashboard de visualização** (ex.: Streamlit) para inspeção dos resultados de métricas.
-
----
-
-## Referências
-- **Documentação Supabase** – https://supabase.com/docs
-- **Cálculo de correlações** – https://en.wikipedia.org/wiki/Pearson_correlation_coefficient
-- **Metodologia de análise** – Descrição completa na publicação final em breve.
-
