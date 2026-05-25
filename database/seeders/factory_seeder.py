@@ -1,6 +1,7 @@
 import os
 from abc import ABC, abstractmethod
 from dotenv import load_dotenv
+from pyparsing import Optional
 
 try:
     from supabase import create_client, Client
@@ -25,9 +26,9 @@ class FactorySeeder(ABC):
 
     def __init__(self):
         load_dotenv()
-        self.supabase: "Client" = self._connect()
+        self.supabase: Optional["Client"] = self._connect()
 
-    def _connect(self) -> "Client":
+    def _connect(self) -> Optional["Client"]:
         """Cria e retorna o cliente Supabase a partir das variáveis de ambiente."""
         url = os.environ.get("SUPABASE_URL")
         key = os.environ.get("SUPABASE_KEY")
