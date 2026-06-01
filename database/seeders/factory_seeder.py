@@ -1,7 +1,7 @@
 import os
 from abc import ABC, abstractmethod
 from dotenv import load_dotenv
-from pyparsing import Optional
+from typing import Optional
 
 try:
     from supabase import create_client, Client

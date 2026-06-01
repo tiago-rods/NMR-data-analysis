@@ -89,7 +89,8 @@ def run(tool_name: Optional[str] = None) -> None:
     logger.info("=== ETAPA 2/3: Calculando métricas ===")
     engine = StatsEngine()
     counts = calculator.fetch_all_experiment_counts()
-    results = engine.calculate_all(observations, counts)
+    metabolite_counts = calculator.fetch_all_metabolite_counts()
+    results = engine.calculate_all(observations, counts, metabolite_counts)
     logger.info(
         "Métricas calculadas com sucesso (%d espectros, %d metabólitos, %d ferramentas).",
         len(results[0]),

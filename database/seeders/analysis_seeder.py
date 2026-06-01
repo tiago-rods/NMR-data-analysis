@@ -74,6 +74,8 @@ class AnalysisSeeder(FactorySeeder):
                 "bias":                     r.bias,
                 "mse":                      r.mse,
                 "mape":                     r.mape,
+                "precisao":                 r.precisao,
+                "recall":                   r.recall,
             }
             for r in results
         ]
@@ -108,6 +110,8 @@ class AnalysisSeeder(FactorySeeder):
                 "bias":                     r.bias,
                 "mse":                      r.mse,
                 "mape":                     r.mape,
+                "precisao":                 r.precisao,
+                "recall":                   r.recall,
             }
             for r in results
         ]
@@ -143,6 +147,8 @@ class AnalysisSeeder(FactorySeeder):
                 "bias":                           r.bias,
                 "mse":                            r.mse,
                 "mape":                           r.mape,
+                "precisao":                       r.precisao,
+                "recall":                         r.recall,
             }
             for r in results
         ]
@@ -173,7 +179,8 @@ if __name__ == "__main__":
 
     observations = calculator.fetch_paired_data()
     counts = calculator.fetch_all_experiment_counts()
-    results = engine.calculate_all(observations, counts)
+    metabolite_counts = calculator.fetch_all_metabolite_counts()
+    results = engine.calculate_all(observations, counts, metabolite_counts)
 
     seeder = AnalysisSeeder()
     seeder.seed(results)
