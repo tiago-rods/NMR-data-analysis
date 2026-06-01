@@ -75,6 +75,20 @@ _ALL_TOOL_COUNT_QUERY = """
     GROUP BY p.fk_experimento, p.fk_ferramenta;
 """
 
+_ALL_GS_COUNT_BY_METABOLITE_QUERY = """
+    SELECT fk_metabolito AS metabolite_id, COUNT(fk_experimento) AS total
+    FROM gold_std
+    GROUP BY fk_metabolito;
+"""
+
+_ALL_TOOL_COUNT_BY_METABOLITE_QUERY = """
+    SELECT p.fk_ferramenta AS tool_id, r.fk_metabolito AS metabolite_id, COUNT(p.fk_experimento) AS total
+    FROM resultado r
+    JOIN processamento p ON r.fk_processamento = p.id_processamento
+    GROUP BY p.fk_ferramenta, r.fk_metabolito;
+"""
+
+
 
 # ── Repository ────────────────────────────────────────────────────────────────
 
@@ -220,3 +234,37 @@ class StatsCalculator:
         except Exception as exc:
             logger.error("Erro ao buscar contagens de experimentos em lote: %s", exc)
             raise
+
+    def fetch_all_metabolite_counts(self) -> dict:
+        """
+        Busca em lote todos os totais de experimentos por metabólito (GS e Tools).
+        
+        Returns:
+            Dict formatado: { 
+                'gs': { metabolite_id: int }, 
+                'tools': { tool_id: { metabolite_id: int } } 
+            }
+        """
+        counts = {'gs': {}, 'tools': {}}
+        try:
+            with self._conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                # 1. GS Counts
+                cur.execute(_ALL_GS_COUNT_BY_METABOLITE_QUERY)
+                for row in cur.fetchall():
+                    counts['gs'][row['metabolite_id'].strip()] = row['total']
+                
+                # 2. Tool Counts
+                cur.execute(_ALL_TOOL_COUNT_BY_METABOLITE_QUERY)
+                for row in cur.fetchall():
+                    tool_id = row['tool_id']
+                    metabolite_id = row['metabolite_id'].strip()
+                    if tool_id not in counts['tools']:
+                        counts['tools'][tool_id] = {}
+                    counts['tools'][tool_id][metabolite_id] = row['total']
+            
+            logger.info("fetch_all_metabolite_counts: contagens globais de metabólitos carregadas.")
+            return counts
+        except Exception as exc:
+            logger.error("Erro ao buscar contagens de metabólitos em lote: %s", exc)
+            raise
+

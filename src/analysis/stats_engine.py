@@ -131,15 +131,20 @@ class StatsEngine:
     def calculate_all(
         self,
         observations: list[PairedObservation],
-        experiment_counts: dict[int, dict]
+        experiment_counts: dict[int, dict],
+        metabolite_counts: dict = None
     ) -> tuple[list[StatResultEspectro], list[StatResultMetabolito], list[StatResultFerramenta]]:
         """
         Calcula métricas nos 3 níveis e retorna as listas completas.
         `experiment_counts` deve ser:
         { exp_id: { 'gs_total': int, 'tools': { tool_id: int } } }
+        `metabolite_counts` deve ser o dict retornado por fetch_all_metabolite_counts.
         """
+        if metabolite_counts is None:
+            metabolite_counts = {'gs': {}, 'tools': {}}
+
         espectros = self._by_experiment(observations, experiment_counts)
-        metabolitos = self._by_metabolite(observations)
+        metabolitos = self._by_metabolite(observations, metabolite_counts)
         ferramentas = self._by_tool(observations, espectros)
 
         logger.info(
@@ -169,6 +174,8 @@ class StatsEngine:
             
             cov_pct = self.calculate_coverage(match_count, gs_total)
             id_gs_pct = self.calculate_identified_gs_pct(tool_total, gs_total)
+            precisao = self.calculate_precision(match_count, tool_total)
+            recall = self.calculate_recall(match_count, gs_total)
 
             tool_arr = np.array([o.concentration_tool for o in obs_list], dtype=float)
             gs_arr   = np.array([o.concentration_gs   for o in obs_list], dtype=float)
@@ -196,6 +203,8 @@ class StatsEngine:
                 bias=bias,
                 mse=mse,
                 mape=mape,
+                precisao=precisao,
+                recall=recall,
             ))
 
         return results
@@ -203,7 +212,7 @@ class StatsEngine:
     # ── Nível 2: por metabolito ────────────────────────────────────────────────
 
     def _by_metabolite(
-        self, observations: list[PairedObservation]
+        self, observations: list[PairedObservation], counts: dict
     ) -> list[StatResultMetabolito]:
         """Agrupa por (tool_test_id, tool_ref_id, metabolite_id)."""
         results = []
@@ -212,6 +221,13 @@ class StatsEngine:
         for key, group in groupby(sorted(observations, key=key_fn), key=key_fn):
             tool_test_id, tool_ref_id, metabolite_id = key
             obs_list = list(group)
+
+            gs_total = counts['gs'].get(metabolite_id, 0)
+            tool_total = counts['tools'].get(tool_test_id, {}).get(metabolite_id, 0)
+            match_count = len(obs_list)
+
+            precisao = self.calculate_precision(match_count, tool_total)
+            recall = self.calculate_recall(match_count, gs_total)
 
             tool_arr = np.array([o.concentration_tool for o in obs_list], dtype=float)
             gs_arr   = np.array([o.concentration_gs   for o in obs_list], dtype=float)
@@ -226,7 +242,7 @@ class StatsEngine:
                 tool_test_id=tool_test_id,
                 tool_ref_id=tool_ref_id,
                 metabolite_id=metabolite_id,
-                n_observations=len(obs_list),
+                n_observations=match_count,
                 pearson_r=pearson_r,
                 pearson_p=pearson_p,
                 spearman_r=spearman_r,
@@ -234,6 +250,8 @@ class StatsEngine:
                 bias=bias,
                 mse=mse,
                 mape=mape,
+                precisao=precisao,
+                recall=recall,
             ))
 
         return results
@@ -265,6 +283,8 @@ class StatsEngine:
             tool_espectros = [e for e in espectros if e.tool_test_id == tool_test_id]
             cov_mean = float(np.mean([e.coverage_pct for e in tool_espectros])) if tool_espectros else 0.0
             id_gs_mean = float(np.mean([e.identified_gs_pct for e in tool_espectros])) if tool_espectros else 0.0
+            precisao_mean = float(np.mean([e.precisao for e in tool_espectros])) if tool_espectros else 0.0
+            recall_mean = float(np.mean([e.recall for e in tool_espectros])) if tool_espectros else 0.0
 
             results.append(StatResultFerramenta(
                 tool_test_id=tool_test_id,
@@ -279,6 +299,8 @@ class StatsEngine:
                 bias=bias,
                 mse=mse,
                 mape=mape,
+                precisao=precisao_mean,
+                recall=recall_mean,
             ))
 
         return results
@@ -307,3 +329,21 @@ class StatsEngine:
         if gs_total == 0:
             return 0.0
         return round((tool_count / gs_total) * 100, 4)
+
+    @staticmethod
+    def calculate_precision(tp: int, total_tool: int) -> float:
+        """
+        Precisão: TP / (TP + FP)
+        """
+        if total_tool == 0:
+            return 0.0
+        return round(tp / total_tool, 4)
+
+    @staticmethod
+    def calculate_recall(tp: int, total_gs: int) -> float:
+        """
+        Recall: TP / (TP + FN)
+        """
+        if total_gs == 0:
+            return 0.0
+        return round(tp / total_gs, 4)

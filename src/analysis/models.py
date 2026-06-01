@@ -5,8 +5,7 @@ Todos os dataclasses são Value Objects — imutáveis e sem dependência
 de banco de dados ou Pandas. Trafegam entre Repository e Engine livremente.
 """
 
-from dataclasses import dataclass, field
-from typing import Optional
+from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
@@ -59,7 +58,9 @@ class StatResultEspectro:
     bias: float = 0.0
     mse: float = 0.0
     mape: float = 0.0
-
+    precisao: float = 0.0
+    recall: float = 0.0
+    
 
 @dataclass
 class StatResultMetabolito:
@@ -78,6 +79,9 @@ class StatResultMetabolito:
     bias: float = 0.0
     mse: float = 0.0
     mape: float = 0.0
+    precisao: float = 0.0 
+    recall: float = 0.0
+
 
 
 @dataclass
@@ -98,4 +102,6 @@ class StatResultFerramenta:
     bias: float = 0.0
     mse: float = 0.0
     mape: float = 0.0
+    precisao: float = 0.0
+    recall: float = 0.0
 
