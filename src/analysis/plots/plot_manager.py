@@ -35,7 +35,7 @@ class PlotManager:
         # 1. Gráficos baseados em PairedObservations (dependem de valores contínuos)
         if observations:
             plot_bland_altman(observations, self.output_dir)
-            plot_correlation(observations, self.output_dir)
+            plot_correlation(observations, tool_names, self.output_dir)
             
             # Distribuição por metabólito e por biofluido
             plot_bias_distribution(observations, self.output_dir, title="Bias by Metabolite", filename="bias_by_metabolite.png", by="metabolite")

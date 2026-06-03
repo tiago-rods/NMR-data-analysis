@@ -20,14 +20,13 @@ def main():
     results = engine.calculate_all(observations, counts, metabolite_counts)
     _, _, ferramentas_resultados = results
 
-    # 2. Configurar nomes de ferramentas (ajuste conforme os IDs no seu banco)
-    # Exemplo: 1=MagMet, 2=Chenomx, etc.
+    # 2. Configurar nomes de ferramentas reais vindos do banco de dados
     tool_names_dict = {
-        1: "MagMet",
-        2: "Chenomx",
-        3: "ASICS",
-        4: "BATMAN",
-        # Adicione outros IDs conforme existam na sua base
+        2: "ASICS (fid)",
+        3: "ASICS (csv)",
+        4: "nmRanalysis",
+        5: "MagMet",
+        6: "LNBioGS"
     }
 
     # 3. Gerar Gráficos
