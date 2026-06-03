@@ -68,7 +68,6 @@ def plot_global_metrics_bar(results: List[StatResultFerramenta], tool_names: Dic
         t_name = tool_names.get(r.tool_test_id, f"Tool {r.tool_test_id}")
         data.append({"Tool": t_name, "Metric": "Precision", "Value": r.precisao})
         data.append({"Tool": t_name, "Metric": "Recall", "Value": r.recall})
-        data.append({"Tool": t_name, "Metric": "Coverage (%)", "Value": r.coverage_mean_pct / 100.0}) # Normalizar para 0-1
 
     df = pd.DataFrame(data)
 
