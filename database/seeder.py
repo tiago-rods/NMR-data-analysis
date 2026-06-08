@@ -1,31 +1,36 @@
 class DatabaseSeeder:
-    def __init__(self, conn):
+    """Base class for seeding initial data into the database."""
+
+    def __init__(self, conn) -> None:
+        """Initializes the DatabaseSeeder.
+
+        Args:
+            conn: An active psycopg2 database connection.
+        """
         self.conn = conn
 
-    def run_seeders(self):
+    def run_seeders(self) -> None:
+        """Populates the database with essential initialisation data.
+
+        Inserts standard reference data (e.g. NMR exam categories, units of
+        measure). Uses ``ON CONFLICT DO NOTHING`` so re-runs are idempotent.
         """
-        Popula tabelas do banco de dados com dados cruciais de inicialização 
-        (ex: Categorias padrão de exames de RMN, Unidades de medida, etc).
-        Se os dados já existirem (conflito único), eles são ignorados (ON CONFLICT DO NOTHING).
-        """
-        print("Iniciando a inserção de dados iniciais (Seeders)...")
-        
-        # Exemplo de código SQL de inicialização (placeholder)
-        # Substitua futuramente quando tivermos as tabelas definitivas.
-        
+        print("Starting initial data seeding...")
+
+        # Placeholder SQL example — replace with actual tables once schema is finalised.
         # example_sql = """
-        #    INSERT INTO your_table_name (column1, column2) 
+        #    INSERT INTO your_table_name (column1, column2)
         #    VALUES ('value1', 'value2')
         #    ON CONFLICT (column1) DO NOTHING;
         # """
-        
+
         # try:
         #    with self.conn.cursor() as cursor:
         #        cursor.execute(example_sql)
         #    self.conn.commit()
-        #    print("Dados base inseridos com sucesso.")
+        #    print("Base data inserted successfully.")
         # except Exception as e:
         #    self.conn.rollback()
-        #    print(f"Erro ao rodar o seeder: {e}")
+        #    print(f"Error running seeder: {e}")
 
-        print("Seeders finalizados. Banco pronto para uso!")
+        print("Seeders complete. Database ready for use!")

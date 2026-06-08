@@ -12,12 +12,20 @@ from database.seeders.factory_seeder import FactorySeeder
 
 
 class ToolsSeeder(FactorySeeder):
-    """
-    Seeder to manually import tool metadata (Name, Version, Technology, Avg Time)
-    from `data/Metadata/metadata_tools.csv` into Supabase.
+    """Seeder that imports NMR tool metadata from a CSV file into Supabase.
+
+    Reads tool name, version, technology, and average processing time from
+    ``data/Metadata/metadata_tools.csv`` and upserts them into the
+    ``public.ferramenta`` table.
     """
 
     def seed(self, csv_path: Path | None = None) -> None:
+        """Reads tool metadata from a CSV and upserts records into Supabase.
+
+        Args:
+            csv_path (Path | None): Path to the CSV file. Defaults to
+                ``data/Metadata/metadata_tools.csv``.
+        """
         if csv_path is None:
             csv_path = Path("data/Metadata/metadata_tools.csv")
 

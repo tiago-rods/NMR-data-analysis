@@ -1,13 +1,13 @@
 """
-Runner de Análise Estatística — Sprint 3.
+Statistical Analysis Runner.
 
-Orquestra o pipeline completo: Load → Calculate → Persist.
+Orchestrates the full pipeline: Load → Calculate → Persist.
 
-  1. [Load]      StatsCalculator busca pares (ferramenta vs Gold Standard) do banco.
-  2. [Calculate] StatsEngine calcula métricas nos 3 níveis de granularidade.
-  3. [Persist]   AnalysisSeeder faz upsert nas tabelas analíticas.
+  1. [Load]      StatsCalculator fetches (tool vs Gold Standard) pairs from the database.
+  2. [Calculate] StatsEngine calculates metrics at 3 levels of granularity.
+  3. [Persist]   AnalysisSeeder upserts results into the analytical tables.
 
-Uso:
+Usage:
     python runners/run_analysis.py
     python runners/run_analysis.py --tool ASICS
     python runners/run_analysis.py --tool nmRanalysis --log-level DEBUG
@@ -19,7 +19,7 @@ import logging
 from pathlib import Path
 from typing import Optional
 
-# Adiciona o diretório raiz do projeto ao sys.path para importações absolutas funcionarem
+# Add the project root to sys.path so absolute imports work correctly
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from database.db_manager import DataBaseManager
@@ -35,11 +35,16 @@ logger = logging.getLogger(__name__)
 
 
 def parse_args() -> argparse.Namespace:
+    """Parses command-line arguments for the analysis runner.
+
+    Returns:
+        argparse.Namespace: Parsed arguments with ``tool`` and ``log_level`` attributes.
+    """
     parser = argparse.ArgumentParser(
         description=(
-            "Pipeline de análise estatística NMR (Sprint 3).\n"
-            "Calcula Pearson, Spearman, Bias, MSE, MAPE e Cobertura "
-            "comparando ferramentas com o Gold Standard."
+            "NMR statistical analysis pipeline.\n"
+            "Calculates Pearson, Spearman, Bias, MSE, MAPE and Coverage "
+            "comparing tools against the Gold Standard."
         )
     )
     parser.add_argument(
@@ -47,8 +52,8 @@ def parse_args() -> argparse.Namespace:
         type=str,
         default=None,
         help=(
-            "Nome da ferramenta a analisar (ex: ASICS, nmRanalysis, MagMet). "
-            "Se omitido, analisa todas as ferramentas."
+            "Name of the tool to analyse (e.g. ASICS, nmRanalysis, MagMet). "
+            "If omitted, all tools are analysed."
         ),
     )
     parser.add_argument(
@@ -56,20 +61,19 @@ def parse_args() -> argparse.Namespace:
         type=str,
         default="INFO",
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
-        help="Nível de log (padrão: INFO).",
+        help="Logging level (default: INFO).",
     )
     return parser.parse_args()
 
 
 def run(tool_name: Optional[str] = None) -> None:
-    """
-    Executa o pipeline completo de análise estatística.
+    """Executes the full statistical analysis pipeline.
 
     Args:
-        tool_name: filtrar por ferramenta específica; None → todas.
+        tool_name (Optional[str]): Filter by a specific tool name; ``None`` runs all tools.
     """
     # ── 1. Load (Repository) ────────────────────────────────────────────────
-    logger.info("=== ETAPA 1/3: Carregando dados do banco ===")
+    logger.info("=== STEP 1/3: Loading data from the database ===")
     db = DataBaseManager()
     calculator = StatsCalculator(db)
 
@@ -77,36 +81,37 @@ def run(tool_name: Optional[str] = None) -> None:
 
     if not observations:
         logger.warning(
-            "Nenhuma observação encontrada%s. "
-            "Verifique se os dados foram ingeridos corretamente.",
-            f" para ferramenta '{tool_name}'" if tool_name else "",
+            "No observations found%s. "
+            "Please verify that the data has been ingested correctly.",
+            f" for tool '{tool_name}'" if tool_name else "",
         )
         return
 
-    logger.info("%d pares (tool vs GS) carregados.", len(observations))
+    logger.info("%d (tool vs GS) pairs loaded.", len(observations))
 
     # ── 2. Calculate (Strategy) ─────────────────────────────────────────────
-    logger.info("=== ETAPA 2/3: Calculando métricas ===")
+    logger.info("=== STEP 2/3: Calculating metrics ===")
     engine = StatsEngine()
     counts = calculator.fetch_all_experiment_counts()
     metabolite_counts = calculator.fetch_all_metabolite_counts()
     results = engine.calculate_all(observations, counts, metabolite_counts)
     logger.info(
-        "Métricas calculadas com sucesso (%d espectros, %d metabólitos, %d ferramentas).",
+        "Metrics calculated successfully (%d spectra, %d metabolites, %d tools).",
         len(results[0]),
         len(results[1]),
         len(results[2]),
     )
 
     # ── 3. Persist (AnalysisSeeder) ─────────────────────────────────────────
-    logger.info("=== ETAPA 3/3: Persistindo resultados ===")
+    logger.info("=== STEP 3/3: Persisting results ===")
     seeder = AnalysisSeeder()
     seeder.seed(results)
 
-    logger.info("=== Pipeline concluído com sucesso. ===")
+    logger.info("=== Pipeline completed successfully. ===")
 
 
 def main() -> None:
+    """Entry point: parses CLI arguments and delegates to ``run()``."""
     args = parse_args()
     logging.getLogger().setLevel(args.log_level)
     run(tool_name=args.tool)

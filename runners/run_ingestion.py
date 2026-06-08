@@ -1,10 +1,10 @@
 """
-Runner de Ingestão — Sprint 2.
+Ingestion Runner.
 
-Extrai o ponto de entrada do ExperimentSeeder para um script independente,
-mantendo o padrão de runners individuais do projeto.
+Exposes the ExperimentSeeder entry point as a standalone script,
+following the project's convention of individual runner scripts.
 
-Uso:
+Usage:
     python runners/run_ingestion.py
     python runners/run_ingestion.py --dir data/processed/formatted/Complete
 """
@@ -14,7 +14,7 @@ import argparse
 import logging
 from pathlib import Path
 
-# Adiciona o diretório raiz do projeto ao sys.path para importações absolutas funcionarem
+# Add the project root to sys.path so absolute imports work correctly
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from database.seeders.tools_seeder import ToolsSeeder
@@ -28,29 +28,36 @@ logger = logging.getLogger(__name__)
 
 
 def parse_args() -> argparse.Namespace:
+    """Parses command-line arguments for the ingestion runner.
+
+    Returns:
+        argparse.Namespace: Parsed arguments with a ``dir`` attribute pointing
+        to the directory containing formatted CSV files.
+    """
     parser = argparse.ArgumentParser(
-        description="Ingere CSVs processados no Supabase (Sprint 2)."
+        description="Ingests processed CSVs into Supabase."
     )
     parser.add_argument(
         "--dir",
         type=Path,
         default=Path("data/processed/formatted/Complete"),
-        help="Diretório com os CSVs formatados (padrão: data/processed/formatted/Complete)",
+        help="Directory containing formatted CSVs (default: data/processed/formatted/Complete)",
     )
     return parser.parse_args()
 
 
 def main() -> None:
+    """Entry point: seeds tools metadata and ingests experiment CSV files into the database."""
     args = parse_args()
 
-    logger.info("Iniciando semeadura de ferramentas manuais...")
+    logger.info("Starting tools metadata seeding...")
     tools_seeder = ToolsSeeder()
     tools_seeder.run()
 
-    logger.info("Iniciando ingestão em: %s", args.dir)
+    logger.info("Starting ingestion from: %s", args.dir)
     seeder = ExperimentSeeder()
     seeder.seed(input_dir=args.dir)
-    logger.info("Ingestão concluída.")
+    logger.info("Ingestion completed.")
 
 
 if __name__ == "__main__":
