@@ -1,8 +1,8 @@
 """
-Modelos de dados do módulo de análise estatística.
+Data models for the statistical analysis module.
 
-Todos os dataclasses são Value Objects — imutáveis e sem dependência
-de banco de dados ou Pandas. Trafegam entre Repository e Engine livremente.
+All dataclasses are Value Objects—immutable and without database or Pandas
+dependency. They flow freely between Repository and Engine.
 """
 
 from dataclasses import dataclass
@@ -11,20 +11,20 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class PairedObservation:
     """
-    Par de concentrações (ferramenta teste vs ferramenta de referência)
-    para um metabolito num espectro específico.
+    Pair of concentrations (test tool vs reference tool)
+    for a specific metabolite in a specific spectrum.
 
-    Imutável (frozen=True): não pode ser modificado após criação, garantindo
-    integridade dos dados ao passar entre camadas.
+    Immutable (frozen=True): cannot be modified after creation, ensuring
+    data integrity when passing between layers.
 
     Attributes:
-        tool_test_id:       id_ferramenta da ferramenta em avaliação
-        tool_ref_id:        id_ferramenta do Gold Standard / referência
-        experiment_id:      id_experimento (espectro individual)
-        metabolite_id:      id_hmdb do metabolito (CHAR 11)
-        biofluid:           biofluido do experimento (ex: 'Soro', 'Urina')
-        concentration_tool: concentração medida pela ferramenta teste
-        concentration_gs:   concentração do Gold Standard
+        tool_test_id:       id_ferramenta of the tool being evaluated
+        tool_ref_id:        id_ferramenta of the Gold Standard / reference tool
+        experiment_id:      id_experimento (individual spectrum)
+        metabolite_id:      id_hmdb of the metabolite (CHAR 11)
+        biofluid:           biofluid of the experiment (e.g., 'Soro', 'Urina')
+        concentration_tool: concentration measured by the test tool
+        concentration_gs:   concentration of the Gold Standard
     """
 
     tool_test_id: int
@@ -39,8 +39,8 @@ class PairedObservation:
 @dataclass
 class StatResultEspectro:
     """
-    Resultado estatístico no nível do Espectro (Experimento).
-    Compara a performance da ferramenta em um único espectro contra a referência.
+    Statistical result at the Spectrum (Experiment) level.
+    Compares the tool's performance in a single spectrum against the reference.
     """
     tool_test_id: int
     tool_ref_id: int
@@ -65,8 +65,8 @@ class StatResultEspectro:
 @dataclass
 class StatResultMetabolito:
     """
-    Resultado estatístico no nível do Metabólito.
-    Avalia a precisão de quantificação de um metabólito específico agrupado por todos os espectros.
+    Statistical result at the Metabolite level.
+    Evaluates the quantification accuracy of a specific metabolite across all spectra.
     """
     tool_test_id: int
     tool_ref_id: int
@@ -87,8 +87,8 @@ class StatResultMetabolito:
 @dataclass
 class StatResultFerramenta:
     """
-    Resultado estatístico no nível global da Ferramenta.
-    Avalia a performance consolidada da ferramenta em todos os espectros e metabólitos.
+    Statistical result at the global Tool level.
+    Evaluates the consolidated performance of the tool across all spectra and metabolites.
     """
     tool_test_id: int
     tool_ref_id: int

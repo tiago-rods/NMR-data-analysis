@@ -17,50 +17,50 @@ QUANT_FILES = [
 
 def sort_key(col_name: str) -> Union[int, str]:
     """
-    Extrai o número inicial de nomes de colunas como '10_1H' para ordenação numérica.
+    Extracts the initial number from column names like '10_1H' for numerical sorting.
     """
     if col_name == 'metabolite':
         return -1
     
-    # Busca por dígitos no início da string usando regex
+    # Extracts the initial number from column names like '10_1H' using regex
     if match := re.search(r'^(\d+)', col_name):
         return int(match.group(1))
     return col_name
 
 def load_quant_data(file_name: str) -> Union[pd.DataFrame, None]:
-    """Carrega um arquivo CSV individual e define o índice."""
+    """Loads a single CSV file and sets the index."""
     file_path = INPUT_DIR / file_name
     if not file_path.exists():
-        print(f"  - [AVISO] Arquivo não encontrado: {file_name}")
+        print(f"  - [WARNING] File not found: {file_name}")
         return None
     
-    print(f"  - Carregando {file_name}...")
+    print(f"  - Loading {file_name}...")
     return pd.read_csv(file_path).set_index('metabolite')
 
 def concat_quantification_files():
-    """Concatena, limpa e ordena arquivos de quantificação NMR."""
-    print("Iniciando concatenação de arquivos...")
+    """Concatenates, cleans and orders NMR quantification files."""
+    print("Starting file concatenation...")
 
     # Pythonic: Uso de List Comprehension filtrando Nones
     dfs = [df for f in QUANT_FILES if (df := load_quant_data(f)) is not None]
 
     if not dfs:
-        print("Erro: Nenhum dado carregado. Verifique os caminhos.")
+        print("Error: No data loaded. Please check the paths.")
         return
 
-    # Concatenação e Limpeza
+    # Concatenation and Cleaning
     # axis=1 (colunas), join='outer' (mantém todos os metabólitos)
     combined_df = pd.concat(dfs, axis=1, join='outer').fillna(0)
 
-    # Ordenação Pythonic usando reindex com colunas ordenadas
+    # Pythonic ordering using reindex with sorted columns
     sorted_cols = sorted(combined_df.columns, key=sort_key)
     combined_df = combined_df.reindex(columns=sorted_cols)
 
-    # Salvamento
+    # Saving
     combined_df.to_csv(OUTPUT_FILE)
 
-    print(f"\nSucesso! Arquivo consolidado: {OUTPUT_FILE.name}")
-    print(f"Metabólitos: {len(combined_df)} | Experimentos: {len(combined_df.columns)}")
+    print(f"\nSuccess! Consolidated file: {OUTPUT_FILE.name}")
+    print(f"Metabolites: {len(combined_df)} | Experiments: {len(combined_df.columns)}")
 
 if __name__ == "__main__":
     concat_quantification_files()

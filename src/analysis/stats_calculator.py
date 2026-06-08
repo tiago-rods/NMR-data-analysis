@@ -1,11 +1,11 @@
 """
 StatsCalculator — Repository Pattern.
 
-Responsabilidade única: encapsular toda lógica de acesso ao banco de dados.
-Nenhuma outra camada deve executar SQL diretamente.
+Unique responsibility: encapsulate all logic for accessing the database.
+No other layer should execute SQL directly.
 
-Retorna objetos PairedObservation prontos para consumo pelo StatsEngine,
-sem expor detalhes de psycopg2 ou do schema SQL para o resto do sistema.
+Returns PairedObservation objects ready for consumption by StatsEngine,
+without exposing psycopg2 or SQL schema details to the rest of the system.
 """
 
 from __future__ import annotations
@@ -94,9 +94,9 @@ _ALL_TOOL_COUNT_BY_METABOLITE_QUERY = """
 
 class StatsCalculator:
     """
-    Repository: encapsula toda lógica SQL de acesso ao banco.
+    Repository: encapsulates all logic for accessing the database.
 
-    Métodos públicos:
+    Public methods:
         fetch_paired_data(tool_name)       → List[PairedObservation]
         fetch_gs_metabolite_count(exp_id)  → int
         fetch_tool_metabolite_count(...)   → int
@@ -106,8 +106,8 @@ class StatsCalculator:
         self._conn = db_manager.conn
         if self._conn is None:
             raise RuntimeError(
-                "DataBaseManager não possui conexão ativa. "
-                "Verifique as variáveis de ambiente."
+                "DataBaseManager does not have an active connection. "
+                "Check the environment variables."
             )
 
     # ── API pública ───────────────────────────────────────────────────────────
@@ -117,16 +117,16 @@ class StatsCalculator:
         tool_name: Optional[str] = None,
     ) -> list[PairedObservation]:
         """
-        Busca todos os pares (concentração da ferramenta x Gold Standard)
-        via INNER JOIN. Apenas metabolitos presentes em ambas as fontes são
-        retornados — isso é intencional e correto para o cálculo estatístico.
+        Fetches all pairs (tool concentration vs Gold Standard)
+        via INNER JOIN. Only metabolites present in both sources are
+        returned—this is intentional and correct for statistical calculation.
 
         Args:
-            tool_name: filtrar por nome de ferramenta (opcional).
-                       Se None, retorna pares de todas as ferramentas.
+            tool_name: filter by tool name (optional).
+                       If None, returns pairs from all tools.
 
         Returns:
-            Lista de PairedObservation ordenada por ferramenta, espectro e metabolito.
+            List of PairedObservation ordered by tool, spectrum, and metabolite.
         """
         where_clause = ""
         params: tuple = ()
@@ -163,13 +163,13 @@ class StatsCalculator:
             return observations
 
         except Exception as exc:
-            logger.error("Erro ao buscar dados pareados: %s", exc)
+            logger.error("Error fetching paired data: %s", exc)
             raise
 
     def fetch_gs_metabolite_count(self, experiment_id: int) -> int:
         """
-        Retorna o total de metabolitos presentes no Gold Standard
-        para um dado espectro. Usado como denominador da % de Cobertura.
+        Returns the total number of metabolites present in the Gold Standard
+        for a given spectrum. Used as the denominator for % Coverage.
         """
         try:
             with self._conn.cursor() as cur:
@@ -178,7 +178,7 @@ class StatsCalculator:
             return int(result[0]) if result else 0
         except Exception as exc:
             logger.error(
-                "Erro ao contar metabolitos do GS (exp=%s): %s", experiment_id, exc
+                "Error counting GS metabolites (exp=%s): %s", experiment_id, exc
             )
             raise
 
@@ -186,8 +186,8 @@ class StatsCalculator:
         self, tool_id: int, experiment_id: int
     ) -> int:
         """
-        Retorna o total de metabolitos identificados pela ferramenta
-        para um dado espectro. Usado para calcular identificados_gs_percent.
+        Returns the total number of metabolites identified by the tool
+        for a given spectrum. Used to calculate identificados_gs_percent.
         """
         try:
             with self._conn.cursor() as cur:
@@ -196,7 +196,7 @@ class StatsCalculator:
             return int(result[0]) if result else 0
         except Exception as exc:
             logger.error(
-                "Erro ao contar metabolitos da ferramenta (tool=%s, exp=%s): %s",
+                "Error counting tool metabolites (tool=%s, exp=%s): %s",
                 tool_id,
                 experiment_id,
                 exc,
@@ -205,11 +205,11 @@ class StatsCalculator:
 
     def fetch_all_experiment_counts(self) -> dict[int, dict]:
         """
-        Busca em lote todos os totais de metabolitos por experimento (GS e Tools).
-        Evita o problema N+1 ao fazer queries individuais.
+        Fetches all metabolite totals by experiment (GS and Tools) in batch mode.
+        Avoids the N+1 problem by using bulk queries instead of individual ones.
         
         Returns:
-            Dict formatado: { experiment_id: { 'gs_total': int, 'tools': { tool_id: int } } }
+            Formatted dict: { experiment_id: { 'gs_total': int, 'tools': { tool_id: int } } }
         """
         counts = {}
         try:
@@ -232,15 +232,15 @@ class StatsCalculator:
             logger.info("fetch_all_experiment_counts: %d experimentos carregados.", len(counts))
             return counts
         except Exception as exc:
-            logger.error("Erro ao buscar contagens de experimentos em lote: %s", exc)
+            logger.error("Error fetching experiment counts in batch: %s", exc)
             raise
 
     def fetch_all_metabolite_counts(self) -> dict:
         """
-        Busca em lote todos os totais de experimentos por metabólito (GS e Tools).
+        Fetches all experiment totals by metabolite (GS and Tools) in batch mode.
         
         Returns:
-            Dict formatado: { 
+            Formatted dict: { 
                 'gs': { metabolite_id: int }, 
                 'tools': { tool_id: { metabolite_id: int } } 
             }
