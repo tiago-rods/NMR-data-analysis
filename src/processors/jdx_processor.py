@@ -19,6 +19,12 @@ _DEFAULT_TSP_WINDOW: tuple[float, float] = (-1.0, 1.0)
 
 
 class JDXProcessor(FactoryProcessor):
+    """Processor for JDX (JCAMP-DX) NMR spectra.
+
+    Aligns the PPM chemical shift scale of each spectrum using the internal
+    TSP reference peak (target = 0.0 ppm) and consolidates all experiments
+    into a single wide-format DataFrame.
+    """
     def process(
         self,
         jdx_data_list: list[dict[str, Any]],

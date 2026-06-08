@@ -3,16 +3,18 @@ import json
 from typing import Dict
 
 def convert_wide_to_jsonb(df: pd.DataFrame) -> Dict[str, str]:
-    """
-    Converts a standardized wide DataFrame into a dictionary where:
-    - Key: Spectrum/Sample Name
-    - Value: JSON string of results [{"metabolite": "...", "concentration": ...}, ...]
-    
+    """Converts a wide-format DataFrame into a dictionary of JSON strings.
+
+    Each key is a spectrum/sample name (column header) and each value is a
+    JSON-encoded list of ``{"metabolite": str, "concentration": float}`` dicts
+    containing only non-zero concentration entries.
+
     Args:
-        df: DataFrame with 'metabolite' as index and spectrum names as columns.
-    
+        df (pd.DataFrame): Wide-format DataFrame with ``'metabolite'`` as the
+            index (or a column) and spectrum names as columns.
+
     Returns:
-        Dict[spectrum_name, json_string]
+        Dict[str, str]: Mapping from spectrum name to its JSON string.
     """
     # Ensure index is named metabolite
     if df.index.name != 'metabolite' and 'metabolite' in df.columns:

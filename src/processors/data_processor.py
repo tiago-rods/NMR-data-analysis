@@ -11,9 +11,10 @@ from src.formatter.factory_csv_formatter import FactoryCSVFormatter
 logger = logging.getLogger(__name__)
 
 class DataProcessor(FactoryProcessor):
-    """
-    Orchestrator for the NMR data pipeline.
-    Connects Readers, Cleaners, and Formatters.
+    """Orchestrator for the NMR data processing pipeline.
+
+    Connects a Reader, an optional Cleaner, and an optional Formatter
+    to produce cleaned and formatted CSV outputs from raw NMR data.
     """
 
     def __init__(
@@ -22,7 +23,15 @@ class DataProcessor(FactoryProcessor):
         output_dir: str,
         cleaner: Optional[Cleaner] = None,
         formatter: Optional[FactoryCSVFormatter] = None
-    ):
+    ) -> None:
+        """Initializes the DataProcessor.
+
+        Args:
+            reader (Any): The reader object used to load raw data.
+            output_dir (str): Directory path where processed files will be saved.
+            cleaner (Optional[Cleaner]): Optional cleaner to apply after reading.
+            formatter (Optional[FactoryCSVFormatter]): Optional formatter to apply after cleaning.
+        """
         self.reader = reader
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -30,8 +39,15 @@ class DataProcessor(FactoryProcessor):
         self.formatter = formatter
 
     def process(self, file_path: str, **kwargs) -> Optional[str]:
-        """
-        Executes the processing pipeline for a single file.
+        """Executes the Read → Clean → Format → Save pipeline for a single file.
+
+        Args:
+            file_path (str): Path to the raw input file.
+            **kwargs: Additional keyword arguments forwarded to the reader.
+
+        Returns:
+            Optional[str]: The absolute path to the saved output file, or
+            ``None`` if an error occurs during processing.
         """
         try:
             logger.info(f"Processing file: {file_path}")
