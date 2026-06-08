@@ -34,6 +34,7 @@ class XLSXLoader(FactoryLoader):
         Raises:
             FileNotFoundError: If the file does not exist.
         """
+        if not self.exists(path):
             raise FileNotFoundError(f"File not found: {path}")
             
         raw_data = self.reader.read(path, **kwargs)
