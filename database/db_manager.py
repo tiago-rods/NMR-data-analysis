@@ -2,16 +2,26 @@ import psycopg2 as pg
 import os
 from dotenv import load_dotenv
 from supabase import create_client, Client
+from typing import Optional, List, Dict, Any
 
 load_dotenv()
 
 class DataBaseManager:
-    def __init__(self):
+    \"\"\"Manager for database connections and operations.
+
+    Internally uses a Supabase client and a native psycopg2 client.
+    \"\"\"
+    
+    def __init__(self) -> None:
         self.conn = self.connect_supabase()
         self.supabase = self._connect_supabase()
 
-    def connect_supabase(self):
-        """Legacy method kept for backward compatibility (returns psycopg2 connection)."""
+    def connect_supabase(self) -> Optional[pg.extensions.connection]:
+        """Establishes connection to the database via psycopg2 (legacy/internal method).
+
+        Returns:
+            Optional[pg.extensions.connection]: Database connection object or None on error.
+        """
         try:
             conn = pg.connect(
                 host=os.getenv("SUPABASE_HOST"),

@@ -5,7 +5,13 @@ from src.analysis.stats_calculator import StatsCalculator
 from src.analysis.stats_engine import StatsEngine
 from src.analysis.plots.plot_manager import PlotManager
 
-def main():
+def main() -> None:
+    """Main entry point for calculating statistics and generating plots.
+
+    Fetches paired data and experiment counts from the database,
+    calculates statistics across different analysis tools, and
+    generates the final plots.
+    """
     # 1. Obter dados do banco e calcular métricas
     print("Conectando ao banco e calculando estatísticas...")
     db = DataBaseManager()
