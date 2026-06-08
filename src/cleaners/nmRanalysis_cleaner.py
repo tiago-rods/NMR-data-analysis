@@ -6,7 +6,14 @@ import pandas as pd
 from src.cleaners.factory_cleaner import Cleaner
 
 class NmRanalysisCleaner(Cleaner):
-    """Cleaner for nmRanalysis data."""
+    """Cleaner for nmRanalysis data.
+    
+    Args:
+        df: DataFrame to clean.
+    
+    Returns:
+        Cleaned DataFrame with columns 'Sample' and metabolite concentrations.
+    """
 
     _REQUIRED_COLS: list[str] = ["Sample", "Metabolite", "Quantity", "Fitting Error"]
 

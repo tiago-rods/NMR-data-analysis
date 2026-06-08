@@ -1,18 +1,18 @@
 """
 StatsEngine — Strategy Pattern.
 
-Responsabilidade única: calcular métricas estatísticas a partir de
-PairedObservations. Nenhum acesso ao banco de dados aqui.
+Unique responsibility: calculate statistical metrics from
+PairedObservations. No database access here.
 
-Estrutura:
-  MetricStrategy (ABC)       ← interface de cada métrica
+Structure:
+  MetricStrategy (ABC)       ← interface of each metric
     ├── PearsonStrategy
     ├── SpearmanStrategy
     ├── BiasStrategy
     ├── MSEStrategy
     └── MAPEStrategy
 
-  StatsEngine                ← orquestra o cálculo nos 3 níveis de granularidade
+  StatsEngine                ← orchestrates the calculation across the 3 levels of granularity
 """
 
 from __future__ import annotations
@@ -34,31 +34,31 @@ from src.analysis.models import (
 
 logger = logging.getLogger(__name__)
 
-# Número mínimo de pares para calcular métricas de correlação.
-# Com menos pares, os coeficientes não têm significância estatística.
+# Minimum number of pairs required to calculate correlation metrics.
+# With fewer pairs, the coefficients do not have statistical significance.
 _MIN_PAIRS = 3
 
 
 # ── Strategies ────────────────────────────────────────────────────────────────
 
 class MetricStrategy(ABC):
-    """Interface Strategy: cada subclasse implementa uma métrica específica."""
+    """Strategy interface: each subclass implements a specific metric."""
 
     @abstractmethod
     def calculate(
         self, tool: np.ndarray, gs: np.ndarray
     ) -> float | tuple[float, float]:
         """
-        Calcula a métrica entre os vetores tool e gs.
+        Calculates the metric between the tool and gs vectors.
 
         Returns:
-            float único ou (coeficiente, p-valor) dependendo da métrica.
+            Unique float or (coefficient, p-value) depending on the metric.
         """
         ...
 
 
 class PearsonStrategy(MetricStrategy):
-    """Correlação de Pearson — mede associação linear."""
+    """Pearson Correlation — measures linear association."""
 
     def calculate(self, tool: np.ndarray, gs: np.ndarray) -> tuple[float, float]:
         if len(tool) < _MIN_PAIRS:
@@ -68,7 +68,7 @@ class PearsonStrategy(MetricStrategy):
 
 
 class SpearmanStrategy(MetricStrategy):
-    """Correlação de Spearman — mede associação monotônica (robusta a outliers)."""
+    """Spearman Correlation — measures monotonic association (robust to outliers)."""
 
     def calculate(self, tool: np.ndarray, gs: np.ndarray) -> tuple[float, float]:
         if len(tool) < _MIN_PAIRS:
@@ -78,14 +78,14 @@ class SpearmanStrategy(MetricStrategy):
 
 
 class BiasStrategy(MetricStrategy):
-    """Viés médio: mean(tool − gs). Positivo → superestimação; negativo → subestimação."""
+    """Mean bias: mean(tool - gs). Positive → overestimation; negative → underestimation."""
 
     def calculate(self, tool: np.ndarray, gs: np.ndarray) -> float:
         return float(np.mean(tool - gs))
 
 
 class MSEStrategy(MetricStrategy):
-    """Erro Quadrático Médio — penaliza erros grandes."""
+    """Mean Squared Error — penalizes large errors."""
 
     def calculate(self, tool: np.ndarray, gs: np.ndarray) -> float:
         return float(np.mean((tool - gs) ** 2))
@@ -93,8 +93,8 @@ class MSEStrategy(MetricStrategy):
 
 class MAPEStrategy(MetricStrategy):
     """
-    Erro Percentual Absoluto Médio.
-    Ignora pares onde gs == 0 para evitar divisão por zero.
+    Mean Absolute Percentage Error.
+    Ignores pairs where gs == 0 to avoid division by zero.
     """
 
     def calculate(self, tool: np.ndarray, gs: np.ndarray) -> float:
@@ -108,11 +108,11 @@ class MAPEStrategy(MetricStrategy):
 
 class StatsEngine:
     """
-    Orquestra o cálculo de métricas nos 3 níveis de granularidade da 3FN:
+    Orchestrates the calculation of metrics across the 3 levels of granularity of the 3NF:
     
-    1. `analise_espectro`: Agrupa por (ferramenta, espectro) e avalia todo o perfil metabólico.
-    2. `analise_metabolito`: Agrupa por (ferramenta, metabolito) e avalia um metabólito em todos os espectros.
-    3. `analise_ferramenta`: Agrupa por (ferramenta) e avalia globalmente.
+    1. `analise_espectro`: Groups by (tool, spectrum) and evaluates the entire metabolic profile.
+    2. `analise_metabolito`: Groups by (tool, metabolite) and evaluates one metabolite across all spectra.
+    3. `analise_ferramenta`: Groups by (tool) and evaluates globally.
 
     Design Pattern: Strategy.
     """
@@ -135,10 +135,10 @@ class StatsEngine:
         metabolite_counts: dict = None
     ) -> tuple[list[StatResultEspectro], list[StatResultMetabolito], list[StatResultFerramenta]]:
         """
-        Calcula métricas nos 3 níveis e retorna as listas completas.
-        `experiment_counts` deve ser:
+        Calculates metrics across the 3 levels and returns the complete lists.
+        `experiment_counts` must be:
         { exp_id: { 'gs_total': int, 'tools': { tool_id: int } } }
-        `metabolite_counts` deve ser o dict retornado por fetch_all_metabolite_counts.
+        `metabolite_counts` must be the dict returned by fetch_all_metabolite_counts.
         """
         if metabolite_counts is None:
             metabolite_counts = {'gs': {}, 'tools': {}}
@@ -153,12 +153,14 @@ class StatsEngine:
         )
         return espectros, metabolitos, ferramentas
 
-    # ── Nível 1: por espectro ──────────────────────────────────────────────────
+    # ── Level 1: by spectrum ──────────────────────────────────────────────────
 
     def _by_experiment(
-        self, observations: list[PairedObservation], counts: dict[int, dict]
+        self,
+        observations: list[PairedObservation],
+        counts: dict[int, dict]
     ) -> list[StatResultEspectro]:
-        """Agrupa por (tool_test_id, tool_ref_id, experiment_id)."""
+        """Groups by (tool_test_id, tool_ref_id, experiment_id)."""
         results = []
         key_fn = lambda o: (o.tool_test_id, o.tool_ref_id, o.experiment_id)
 
@@ -209,12 +211,12 @@ class StatsEngine:
 
         return results
 
-    # ── Nível 2: por metabolito ────────────────────────────────────────────────
+    # ── Level 2: by metabolite ────────────────────────────────────────────────
 
     def _by_metabolite(
         self, observations: list[PairedObservation], counts: dict
     ) -> list[StatResultMetabolito]:
-        """Agrupa por (tool_test_id, tool_ref_id, metabolite_id)."""
+        """Groups by (tool_test_id, tool_ref_id, metabolite_id)."""
         results = []
         key_fn = lambda o: (o.tool_test_id, o.tool_ref_id, o.metabolite_id)
 
@@ -256,14 +258,14 @@ class StatsEngine:
 
         return results
 
-    # ── Nível 3: por ferramenta (total) ───────────────────────────────────────
+    # ── Level 3: by tool (total) ───────────────────────────────────────
 
     def _by_tool(
         self,
         observations: list[PairedObservation],
         espectros: list[StatResultEspectro]
     ) -> list[StatResultFerramenta]:
-        """Agrupa por (tool_test_id, tool_ref_id)."""
+        """Groups by (tool_test_id, tool_ref_id)."""
         results = []
         key_fn = lambda o: (o.tool_test_id, o.tool_ref_id)
 
@@ -305,17 +307,17 @@ class StatsEngine:
 
         return results
 
-    # ── Cobertura (calculada separadamente pois depende do total do GS) ────────
+    # ── Coverage (calculated separately as it depends on the GS total) ────────
 
     @staticmethod
     def calculate_coverage(matched_count: int, gs_total: int) -> float:
         """
-        % de metabolitos do GS identificados pela ferramenta neste espectro.
+        % of GS metabolites identified by the tool in this spectrum.
         Args:
-            matched_count: nº de metabolitos presentes em ambos (JOIN count)
-            gs_total:      nº total de metabolitos no GS para este espectro
+            matched_count: nº of metabolites present in both (JOIN count)
+            gs_total:      total nº of metabolites in GS for this spectrum
         Returns:
-            Percentual entre 0.0 e 100.0
+            Percentage between 0.0 and 100.0
         """
         if gs_total == 0:
             return 0.0
@@ -324,7 +326,7 @@ class StatsEngine:
     @staticmethod
     def calculate_identified_gs_pct(tool_count: int, gs_total: int) -> float:
         """
-        % de metabolitos identificados pela ferramenta em relação ao GS.
+        % of GS metabolites identified by the tool.
         """
         if gs_total == 0:
             return 0.0

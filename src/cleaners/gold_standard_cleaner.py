@@ -10,6 +10,12 @@ class GoldStandardCleaner(Cleaner):
     Cleaner for Gold Standard Excel files (Chenomx format).
     It extracts the actual data from the multi‑header Excel structure and
     prepares it for the standard project layout.
+    
+    Args:
+        df: DataFrame to clean.
+    
+    Returns:
+        Cleaned DataFrame with columns 'Sample' and metabolite concentrations.
     """
 
     def clean(self, df: pd.DataFrame) -> pd.DataFrame:

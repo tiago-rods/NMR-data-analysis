@@ -1,14 +1,22 @@
 import logging
-import re
-from pathlib import Path
-from typing import Optional, Any
 import pandas as pd
 from src.cleaners.factory_cleaner import Cleaner
 
 logger = logging.getLogger(__name__)
 
 class ASICSCleaner(Cleaner):
-    """Cleaner for ASICS data."""
+    """Cleaner for ASICS data.
+    
+    This class handles two possible input formats:
+    1. Long (Tidy): 'Experiment' and 'Metabolite' are columns.
+    2. Wide: 'Experiment' is the index and 'Metabolite' are the columns.
+    
+    Args:
+        df: DataFrame to clean.
+    
+    Returns:
+        Cleaned DataFrame.
+    """
 
     def clean(self, df: pd.DataFrame) -> pd.DataFrame:
         # 1. Normalize: if 'Experiment' or 'Metabolite' is the index, move to columns

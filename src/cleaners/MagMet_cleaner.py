@@ -6,7 +6,14 @@ import pandas as pd
 from src.cleaners.factory_cleaner import Cleaner
 
 class MagMetCleaner(Cleaner):
-    """Cleaner for MagMet data."""
+    """Cleaner for MagMet data.
+    
+    Args:
+        df: DataFrame to clean.
+    
+    Returns:
+        Cleaned DataFrame with columns 'Sample' and metabolite concentrations.
+    """
 
     def clean(self, df: pd.DataFrame) -> pd.DataFrame:
         # 1. Strip .fid suffix from column names
