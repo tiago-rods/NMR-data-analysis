@@ -7,10 +7,11 @@ from typing import Optional, List, Dict, Any
 load_dotenv()
 
 class DataBaseManager:
-    \"\"\"Manager for database connections and operations.
+    """
+    Manager for database connections and operations.
 
     Internally uses a Supabase client and a native psycopg2 client.
-    \"\"\"
+    """
     
     def __init__(self) -> None:
         self.conn = self.connect_supabase()
