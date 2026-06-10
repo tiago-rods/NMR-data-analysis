@@ -126,15 +126,21 @@ flowchart LR
 ## Como executar o pipeline completo
 1. **Padronizar Gold Standard**
    ```bash
-   python -m Scripts.standardize_gold_standard
+   python cli.py standardize
    ```
 2. **Ingerir resultados das ferramentas**
    ```bash
-   python -m database.seeders.experiment_seeder
+   python cli.py ingest
    ```
+   *(Pode-se usar `python cli.py ingest --dir caminho/da/pasta` se os arquivos estiverem em outra pasta)*
 3. **Calcular e persistir métricas**
    ```bash
-   python -m runners.run_analysis
+   python cli.py analyze
+   ```
+   *(Pode-se usar `python cli.py analyze --tool ASICS` para rodar análise de apenas uma ferramenta específica)*
+4. **Gerar Gráficos Finais**
+   ```bash
+   python cli.py plot
    ```
 
 > ** Observação:** As p‑valores `pearson_p` e `spearman_p` podem aparecer como `0.0` quando o número de observações é muito grande (ex.: >10 000). Nesse caso o valor está abaixo do limite de precisão (`≈4.9e‑324`) e o banco o grava como zero; estatisticamente isso indica **significância extrema (p < 10⁻³²⁴)**.

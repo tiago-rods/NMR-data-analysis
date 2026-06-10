@@ -46,18 +46,26 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> None:
-    """Entry point: seeds tools metadata and ingests experiment CSV files into the database."""
-    args = parse_args()
+def run(input_dir: Path) -> None:
+    """Seeds tools metadata and ingests experiment CSV files into the database.
 
+    Args:
+        input_dir (Path): Directory containing formatted CSVs.
+    """
     logger.info("Starting tools metadata seeding...")
     tools_seeder = ToolsSeeder()
     tools_seeder.run()
 
-    logger.info("Starting ingestion from: %s", args.dir)
+    logger.info("Starting ingestion from: %s", input_dir)
     seeder = ExperimentSeeder()
-    seeder.seed(input_dir=args.dir)
+    seeder.seed(input_dir=input_dir)
     logger.info("Ingestion completed.")
+
+
+def main() -> None:
+    """Entry point: parses arguments and delegates to run()."""
+    args = parse_args()
+    run(input_dir=args.dir)
 
 
 if __name__ == "__main__":
